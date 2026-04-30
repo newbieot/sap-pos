@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Converter SAP - Corporate Sales KCU Batam</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <style>
+        .pos-orange { background-color: #ff6600; }
+        .pos-orange-text { color: #ff6600; }
+        .border-pos { border-color: #ff6600; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col font-sans">
+
+    <header class="bg-white shadow-sm p-4 px-6 flex justify-between items-center border-b-4 border-pos">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/Danantara_Indonesia_%28no_SW%29.svg/960px-Danantara_Indonesia_%28no_SW%29.svg.png" 
+             alt="Logo Danantara" class="h-10 md:h-12 object-contain">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/4/47/POSIND_2023_%28with_wordmark%29.svg" 
+             alt="Logo Pos Indonesia" class="h-10 md:h-12 object-contain">
+    </header>
+
+    <main class="flex-grow flex flex-col items-center justify-center p-6">
+        <div class="bg-white rounded-2xl shadow-xl p-8 max-w-3xl w-full text-center border border-gray-100">
+            <h1 class="text-3xl font-extrabold text-gray-800 mb-2">Mile App Template Converter</h1>
+            <p class="text-gray-500 mb-8 font-medium italic text-sm">Pembaruan: Perbaikan Kolom INS Kosong & Nominal Harga</p>
+
+            <div id="dropZone" class="group border-4 border-dashed border-gray-200 rounded-2xl p-12 bg-gray-50 hover:bg-orange-50 hover:border-pos transition-all duration-300 cursor-pointer relative">
+                <input type="file" id="fileUpload" accept=".xlsx, .xls" class="hidden" />
+                <label for="fileUpload" class="cursor-pointer flex flex-col items-center">
+                    <div class="bg-orange-100 p-4 rounded-full mb-4 group-hover:scale-110 transition-transform">
+                        <svg class="w-12 h-12 pos-orange-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                    </div>
+                    <span class="text-xl font-bold text-gray-700">Upload File SAP X POS</span>
+                    <span class="text-sm text-gray-400 mt-2">Sistem akan otomatis menghapus baris kosong dan membersihkan kolom INS</span>
+                </label>
+            </div>
+
+            <div id="statusContainer" class="mt-8 text-left bg-gray-50 p-6 rounded-xl border border-gray-200 hidden">
+                <h3 class="font-bold text-gray-800 mb-3 flex items-center">
+                    <span class="pos-orange w-2 h-6 rounded-full mr-2"></span>
+                    Log Aktivitas
+                </h3>
+                <ul id="statusList" class="space-y-2 text-sm text-gray-600"></ul>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-gray-800 text-white p-6 text-center">
+        <p class="text-sm opacity-80">Corporate Sales Team KCU Batam 29400 Pos Indonesia</p>
+    </footer>
+
+    <script>
+        const fileInput = document.getElementById('fileUpload');
+        const statusContainer = document.getElementById('statusContainer');
+        const statusList = document.getElementById('statusList');
+
+        function addLog(message, isSuccess = true) {
+            statusContainer.classList.remove('hidden');
+            const li = document.createElement('li');
+            li.className = isSuccess ? "flex items-center text-green-600" : "flex items-center text-red-500";
+            li.innerHTML = `<span class="mr-2">${isSuccess ? '✅' : '❌'}</span> ${message}`;
+            statusList.appendChild(li);
+        }
+
+        function findKey(row, possibleNames) {
+            const keys = Object.keys(row);
+            for (let name of possibleNames) {
+                const found = keys.find(k => k.trim().toLowerCase() === name.toLowerCase());
+                if (found) return row[found];
+            }
+            return null;
+        }
+
+        function cleanCurrency(val) {
+            if (val === undefined || val === null || val === "") return 0;
+            const cleanStr = String(val).replace(/Rp/gi, '').replace(/\./g, '').replace(/,/g, '').trim();
+            const num = parseInt(cleanStr, 10);
+            return isNaN(num) ? 0 : num;
+        }
+
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            statusList.innerHTML = "";
+            addLog(`Memproses file: ${file.name}`);
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const data = new Uint8Array(event.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const dateObj = new Date();
+                    const today = dateObj.getDate().toString().padStart(2, '0') + (dateObj.getMonth() + 1).toString().padStart(2, '0') + dateObj.getFullYear();
+                    
+                    // --- PROSES COD ---
+                    if (workbook.SheetNames.includes('COD')) {
+                        const ws = workbook.Sheets['COD'];
+                        const jsonData = XLSX.utils.sheet_to_json(ws, { range: 2, defval: "" });
+                        
+                        const filteredData = jsonData.filter(row => {
+                            const awb = findKey(row, ['No. AWB', 'No.AWB', 'AWB', 'No']);
+                            return awb && String(awb).trim() !== "";
+                        });
+
+                        if (filteredData.length > 0) {
+                            const codTemplate = filteredData.map(row => ({
+                                'nama_penerima': findKey(row, ['Penerima']) || "",
+                                'telp_penerima': findKey(row, ['Tlp1', 'Telepon']) || "",
+                                'alamat_penerima': findKey(row, ['Alamat Penerima', 'Alamat']) || "",
+                                'zip_code_penerima': '29411',
+                                'zona_penerima': '29400',
+                                'koli_description': findKey(row, ['Keterangan Barang', 'Isi']) || "",
+                                'koli_weight': findKey(row, ['Berat']) || "1",
+                                'koli_width': 10, 'koli_height': 10, 'koli_length': 10,
+                                'account_pgm': '0166648410',
+                                'instruksi_pengiriman': findKey(row, ['No. AWB', 'No.AWB', 'AWB']) || "",
+                                'harga_barang': cleanCurrency(findKey(row, ['Nilai COD', 'COD'])),
+                                'ref_no': findKey(row, ['No. AWB', 'No.AWB', 'AWB']) || "",
+                                'Jenis_Barang': 'PAKET',
+                                'COD': 'COD',
+                                'statusRetur': 0,
+                                'INS': null // Null memastikan sel benar-benar kosong di XLSX
+                            })).sort((a, b) => a.harga_barang - b.harga_barang);
+
+                            const newWs = XLSX.utils.json_to_sheet(codTemplate);
+                            const newWb = XLSX.utils.book_new();
+                            XLSX.utils.book_append_sheet(newWb, newWs, "Sheet1");
+                            XLSX.writeFile(newWb, `template_cod_sapx_${today}.xlsx`);
+                            addLog(`COD Berhasil: ${filteredData.length} baris.`);
+                        }
+                    }
+
+                    // --- PROSES NON COD ---
+                    if (workbook.SheetNames.includes('NON COD (SPESIAL HANDLING)')) {
+                        const ws = workbook.Sheets['NON COD (SPESIAL HANDLING)'];
+                        const jsonData = XLSX.utils.sheet_to_json(ws, { range: 2, defval: "" });
+
+                        const filteredData = jsonData.filter(row => {
+                            const awb = findKey(row, ['No. AWB', 'No.AWB', 'AWB', 'No']);
+                            return awb && String(awb).trim() !== "";
+                        });
+
+                        if (filteredData.length > 0) {
+                            const nonCodTemplate = filteredData.map((row, idx) => ({
+                                'connote_code': idx + 1,
+                                'customer_code': 'WSSAP01294A',
+                                'origin_data_customer_name': findKey(row, ['Pengirim']) || "ANGGUN",
+                                'origin_data_customer_phone': '082169602910',
+                                'origin_data_customer_address': 'SAP BATAM',
+                                'origin_data_customer_zip_code': '29411',
+                                'origin_data_zone_code': '29400',
+                                'destination_data_customer_name': findKey(row, ['Penerima']) || "",
+                                'destination_data_customer_phone': findKey(row, ['Tlp1', 'Telepon']) || "",
+                                'destination_data_customer_address': findKey(row, ['Alamat Penerima', 'Alamat']) || "",
+                                'destination_data_customer_zip_code': '29411',
+                                'destination_data_zone_code': '29400',
+                                'service_code': 'PKH',
+                                'connote_sub_service_code': '911231',
+                                'koli_data_koli_description': findKey(row, ['Keterangan Barang', 'Isi']) || "",
+                                'koli_data_koli_weight': findKey(row, ['Berat']) || "1",
+                                'koli_data_koli_width': 10, 'koli_data_koli_height': 10, 'koli_data_koli_length': 10,
+                                'transaction_payment_type_name': 'INVOICE',
+                                'instruksi_pengiriman': 'Tolong diantar dengan baik',
+                                'harga_barang': 0,
+                                'ref_no': findKey(row, ['No. AWB', 'No.AWB', 'AWB']) || "",
+                                'Jenis_Barang': 'Paket',
+                                'statusRetur': 'Kembali ke pengirim',
+                                'INS': null // Null memastikan sel benar-benar kosong di XLSX
+                            })).sort((a, b) => a.destination_data_customer_name.localeCompare(b.destination_data_customer_name));
+
+                            const newWs = XLSX.utils.json_to_sheet(nonCodTemplate);
+                            const newWb = XLSX.utils.book_new();
+                            XLSX.utils.book_append_sheet(newWb, newWs, "Sheet1");
+                            XLSX.writeFile(newWb, `template_noncod_sapx_${today}.xlsx`);
+                            addLog(`Non-COD Berhasil: ${filteredData.length} baris.`);
+                        }
+                    }
+                    
+                    addLog("Selesai. Silakan cek folder Download.");
+                    e.target.value = ""; 
+                } catch (err) {
+                    addLog("Gagal: " + err.message, false);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+    </script>
+</body>
+</html>
