@@ -10,6 +10,11 @@
         .pos-orange { background-color: #ff6600; }
         .pos-orange-text { color: #ff6600; }
         .border-pos { border-color: #ff6600; }
+        #dropZone.dragover {
+            background-color: #fff7ed;
+            border-color: #ff6600;
+            transform: scale(1.02);
+        }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col font-sans">
@@ -24,18 +29,18 @@
     <main class="flex-grow flex flex-col items-center justify-center p-6">
         <div class="bg-white rounded-2xl shadow-xl p-8 max-w-3xl w-full text-center border border-gray-100">
             <h1 class="text-3xl font-extrabold text-gray-800 mb-2">Mile App Template Converter</h1>
-            <p class="text-gray-500 mb-8 font-medium italic text-sm">Pembaruan: Perbaikan Kolom INS Kosong & Nominal Harga</p>
+            <p class="text-gray-500 mb-8 font-medium italic text-sm">Fitur: Drag & Drop, INS Kosong & Fix Nominal Harga</p>
 
             <div id="dropZone" class="group border-4 border-dashed border-gray-200 rounded-2xl p-12 bg-gray-50 hover:bg-orange-50 hover:border-pos transition-all duration-300 cursor-pointer relative">
                 <input type="file" id="fileUpload" accept=".xlsx, .xls" class="hidden" />
                 <label for="fileUpload" class="cursor-pointer flex flex-col items-center">
-                    <div class="bg-orange-100 p-4 rounded-full mb-4 group-hover:scale-110 transition-transform">
+                    <div class="bg-orange-100 p-4 rounded-full mb-4 group-hover:scale-110 transition-transform pointer-events-none">
                         <svg class="w-12 h-12 pos-orange-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                         </svg>
                     </div>
-                    <span class="text-xl font-bold text-gray-700">Upload File SAP X POS</span>
-                    <span class="text-sm text-gray-400 mt-2">Sistem akan otomatis menghapus baris kosong dan membersihkan kolom INS</span>
+                    <span class="text-xl font-bold text-gray-700 pointer-events-none">Tarik & Lepas File Excel di Sini</span>
+                    <span class="text-sm text-gray-400 mt-2 pointer-events-none font-medium">Atau klik untuk pilih file dari komputer</span>
                 </label>
             </div>
 
@@ -50,42 +55,48 @@
     </main>
 
     <footer class="bg-gray-800 text-white p-6 text-center">
-        <p class="text-sm opacity-80">Corporate Sales Team KCU Batam 29400 Pos Indonesia</p>
+        <p class="text-sm opacity-80 font-medium">Corporate Sales Team KCU Batam 29400 Pos Indonesia</p>
     </footer>
 
     <script>
         const fileInput = document.getElementById('fileUpload');
+        const dropZone = document.getElementById('dropZone');
         const statusContainer = document.getElementById('statusContainer');
         const statusList = document.getElementById('statusList');
 
-        function addLog(message, isSuccess = true) {
-            statusContainer.classList.remove('hidden');
-            const li = document.createElement('li');
-            li.className = isSuccess ? "flex items-center text-green-600" : "flex items-center text-red-500";
-            li.innerHTML = `<span class="mr-2">${isSuccess ? '✅' : '❌'}</span> ${message}`;
-            statusList.appendChild(li);
+        // --- Logika Drag & Drop ---
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults (e) {
+            e.preventDefault();
+            e.stopPropagation();
         }
 
-        function findKey(row, possibleNames) {
-            const keys = Object.keys(row);
-            for (let name of possibleNames) {
-                const found = keys.find(k => k.trim().toLowerCase() === name.toLowerCase());
-                if (found) return row[found];
-            }
-            return null;
-        }
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
+        });
 
-        function cleanCurrency(val) {
-            if (val === undefined || val === null || val === "") return 0;
-            const cleanStr = String(val).replace(/Rp/gi, '').replace(/\./g, '').replace(/,/g, '').trim();
-            const num = parseInt(cleanStr, 10);
-            return isNaN(num) ? 0 : num;
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
+        });
+
+        dropZone.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files[0]);
         }
 
         fileInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
+            handleFiles(this.files[0]);
+        });
 
+        // --- Logika Inti Pemrosesan ---
+        function handleFiles(file) {
+            if (!file) return;
             statusList.innerHTML = "";
             addLog(`Memproses file: ${file.name}`);
 
@@ -97,11 +108,10 @@
                     const dateObj = new Date();
                     const today = dateObj.getDate().toString().padStart(2, '0') + (dateObj.getMonth() + 1).toString().padStart(2, '0') + dateObj.getFullYear();
                     
-                    // --- PROSES COD ---
+                    // Proses COD
                     if (workbook.SheetNames.includes('COD')) {
                         const ws = workbook.Sheets['COD'];
                         const jsonData = XLSX.utils.sheet_to_json(ws, { range: 2, defval: "" });
-                        
                         const filteredData = jsonData.filter(row => {
                             const awb = findKey(row, ['No. AWB', 'No.AWB', 'AWB', 'No']);
                             return awb && String(awb).trim() !== "";
@@ -124,22 +134,18 @@
                                 'Jenis_Barang': 'PAKET',
                                 'COD': 'COD',
                                 'statusRetur': 0,
-                                'INS': null // Null memastikan sel benar-benar kosong di XLSX
+                                'INS': null // Blank asli
                             })).sort((a, b) => a.harga_barang - b.harga_barang);
 
-                            const newWs = XLSX.utils.json_to_sheet(codTemplate);
-                            const newWb = XLSX.utils.book_new();
-                            XLSX.utils.book_append_sheet(newWb, newWs, "Sheet1");
-                            XLSX.writeFile(newWb, `template_cod_sapx_${today}.xlsx`);
+                            saveFile(codTemplate, `template_cod_sapx_${today}.xlsx`);
                             addLog(`COD Berhasil: ${filteredData.length} baris.`);
                         }
                     }
 
-                    // --- PROSES NON COD ---
+                    // Proses NON COD
                     if (workbook.SheetNames.includes('NON COD (SPESIAL HANDLING)')) {
                         const ws = workbook.Sheets['NON COD (SPESIAL HANDLING)'];
                         const jsonData = XLSX.utils.sheet_to_json(ws, { range: 2, defval: "" });
-
                         const filteredData = jsonData.filter(row => {
                             const awb = findKey(row, ['No. AWB', 'No.AWB', 'AWB', 'No']);
                             return awb && String(awb).trim() !== "";
@@ -170,25 +176,53 @@
                                 'ref_no': findKey(row, ['No. AWB', 'No.AWB', 'AWB']) || "",
                                 'Jenis_Barang': 'Paket',
                                 'statusRetur': 'Kembali ke pengirim',
-                                'INS': null // Null memastikan sel benar-benar kosong di XLSX
+                                'INS': null // Blank asli
                             })).sort((a, b) => a.destination_data_customer_name.localeCompare(b.destination_data_customer_name));
 
-                            const newWs = XLSX.utils.json_to_sheet(nonCodTemplate);
-                            const newWb = XLSX.utils.book_new();
-                            XLSX.utils.book_append_sheet(newWb, newWs, "Sheet1");
-                            XLSX.writeFile(newWb, `template_noncod_sapx_${today}.xlsx`);
+                            saveFile(nonCodTemplate, `template_noncod_sapx_${today}.xlsx`);
                             addLog(`Non-COD Berhasil: ${filteredData.length} baris.`);
                         }
                     }
                     
-                    addLog("Selesai. Silakan cek folder Download.");
-                    e.target.value = ""; 
+                    addLog("Selesai. File otomatis terunduh.");
+                    fileInput.value = ""; 
                 } catch (err) {
                     addLog("Gagal: " + err.message, false);
                 }
             };
             reader.readAsArrayBuffer(file);
-        });
+        }
+
+        function addLog(message, isSuccess = true) {
+            statusContainer.classList.remove('hidden');
+            const li = document.createElement('li');
+            li.className = isSuccess ? "flex items-center text-green-600" : "flex items-center text-red-500";
+            li.innerHTML = `<span class="mr-2">${isSuccess ? '✅' : '❌'}</span> ${message}`;
+            statusList.appendChild(li);
+        }
+
+        function findKey(row, possibleNames) {
+            const keys = Object.keys(row);
+            for (let name of possibleNames) {
+                const found = keys.find(k => k.trim().toLowerCase() === name.toLowerCase());
+                if (found) return row[found];
+            }
+            return null;
+        }
+
+        function cleanCurrency(val) {
+            if (val === undefined || val === null || val === "") return 0;
+            const cleanStr = String(val).replace(/Rp/gi, '').replace(/\./g, '').replace(/,/g, '').trim();
+            const num = parseInt(cleanStr, 10);
+            return isNaN(num) ? 0 : num;
+        }
+
+        function saveFile(data, fileName) {
+            const newWs = XLSX.utils.json_to_sheet(data);
+            const newWb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(newWb, newWs, "Sheet1");
+            XLSX.writeFile(newWb, fileName);
+        }
     </script>
 </body>
 </html>
