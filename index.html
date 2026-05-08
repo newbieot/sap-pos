@@ -13,7 +13,7 @@
         #dropZone.dragover {
             background-color: #fff7ed;
             border-color: #ff6600;
-            transform: scale(1.02);
+            transform: scale(1.01);
         }
     </style>
 </head>
@@ -29,7 +29,7 @@
     <main class="flex-grow flex flex-col items-center justify-center p-6">
         <div class="bg-white rounded-2xl shadow-xl p-8 max-w-3xl w-full text-center border border-gray-100">
             <h1 class="text-3xl font-extrabold text-gray-800 mb-2">Mile App Template Converter</h1>
-            <p class="text-gray-500 mb-8 font-medium italic text-sm">Fitur: Drag & Drop, INS Kosong & Fix Nominal Harga</p>
+            <p class="text-gray-500 mb-8 font-medium italic text-sm text-orange-600">Update: Auto-Fit Column Width (Tampilan Rapi)</p>
 
             <div id="dropZone" class="group border-4 border-dashed border-gray-200 rounded-2xl p-12 bg-gray-50 hover:bg-orange-50 hover:border-pos transition-all duration-300 cursor-pointer relative">
                 <input type="file" id="fileUpload" accept=".xlsx, .xls" class="hidden" />
@@ -40,7 +40,7 @@
                         </svg>
                     </div>
                     <span class="text-xl font-bold text-gray-700 pointer-events-none">Tarik & Lepas File Excel di Sini</span>
-                    <span class="text-sm text-gray-400 mt-2 pointer-events-none font-medium">Atau klik untuk pilih file dari komputer</span>
+                    <span class="text-sm text-gray-400 mt-2 pointer-events-none font-medium text-center">Data kosong akan otomatis diabaikan & kolom INS dikosongkan murni.</span>
                 </label>
             </div>
 
@@ -64,15 +64,10 @@
         const statusContainer = document.getElementById('statusContainer');
         const statusList = document.getElementById('statusList');
 
-        // --- Logika Drag & Drop ---
+        // --- Fitur Drag & Drop ---
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, preventDefaults, false);
+            dropZone.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false);
         });
-
-        function preventDefaults (e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
 
         ['dragenter', 'dragover'].forEach(eventName => {
             dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
@@ -82,43 +77,33 @@
             dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
         });
 
-        dropZone.addEventListener('drop', handleDrop, false);
+        dropZone.addEventListener('drop', e => handleFiles(e.dataTransfer.files[0]), false);
+        fileInput.addEventListener('change', e => handleFiles(e.target.files[0]));
 
-        function handleDrop(e) {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-            handleFiles(files[0]);
-        }
-
-        fileInput.addEventListener('change', function(e) {
-            handleFiles(this.files[0]);
-        });
-
-        // --- Logika Inti Pemrosesan ---
+        // --- Logika Inti ---
         function handleFiles(file) {
             if (!file) return;
             statusList.innerHTML = "";
-            addLog(`Memproses file: ${file.name}`);
+            addLog(`Memulai konversi file: ${file.name}`);
 
             const reader = new FileReader();
             reader.onload = function(event) {
                 try {
                     const data = new Uint8Array(event.target.result);
                     const workbook = XLSX.read(data, { type: 'array' });
-                    const dateObj = new Date();
-                    const today = dateObj.getDate().toString().padStart(2, '0') + (dateObj.getMonth() + 1).toString().padStart(2, '0') + dateObj.getFullYear();
+                    const today = new Date().toLocaleDateString('id-ID', {day: '2-digit', month: '2-digit', year: 'numeric'}).replace(/\//g, '');
                     
-                    // Proses COD
+                    // 1. Proses Sheet COD
                     if (workbook.SheetNames.includes('COD')) {
                         const ws = workbook.Sheets['COD'];
                         const jsonData = XLSX.utils.sheet_to_json(ws, { range: 2, defval: "" });
-                        const filteredData = jsonData.filter(row => {
-                            const awb = findKey(row, ['No. AWB', 'No.AWB', 'AWB', 'No']);
+                        const filtered = jsonData.filter(row => {
+                            const awb = findKey(row, ['No. AWB', 'No.AWB', 'AWB']);
                             return awb && String(awb).trim() !== "";
                         });
 
-                        if (filteredData.length > 0) {
-                            const codTemplate = filteredData.map(row => ({
+                        if (filtered.length > 0) {
+                            const codTemplate = filtered.map(row => ({
                                 'nama_penerima': findKey(row, ['Penerima']) || "",
                                 'telp_penerima': findKey(row, ['Tlp1', 'Telepon']) || "",
                                 'alamat_penerima': findKey(row, ['Alamat Penerima', 'Alamat']) || "",
@@ -134,25 +119,25 @@
                                 'Jenis_Barang': 'PAKET',
                                 'COD': 'COD',
                                 'statusRetur': 0,
-                                'INS': null // Blank asli
+                                'INS': null // Blank asli untuk Mile App
                             })).sort((a, b) => a.harga_barang - b.harga_barang);
 
-                            saveFile(codTemplate, `template_cod_sapx_${today}.xlsx`);
-                            addLog(`COD Berhasil: ${filteredData.length} baris.`);
+                            saveExcel(codTemplate, `template_cod_sapx_${today}.xlsx`);
+                            addLog(`COD Sukses: ${filtered.length} baris diproses.`);
                         }
                     }
 
-                    // Proses NON COD
+                    // 2. Proses Sheet NON COD
                     if (workbook.SheetNames.includes('NON COD (SPESIAL HANDLING)')) {
                         const ws = workbook.Sheets['NON COD (SPESIAL HANDLING)'];
                         const jsonData = XLSX.utils.sheet_to_json(ws, { range: 2, defval: "" });
-                        const filteredData = jsonData.filter(row => {
-                            const awb = findKey(row, ['No. AWB', 'No.AWB', 'AWB', 'No']);
+                        const filtered = jsonData.filter(row => {
+                            const awb = findKey(row, ['No. AWB', 'No.AWB', 'AWB']);
                             return awb && String(awb).trim() !== "";
                         });
 
-                        if (filteredData.length > 0) {
-                            const nonCodTemplate = filteredData.map((row, idx) => ({
+                        if (filtered.length > 0) {
+                            const nonCodTemplate = filtered.map((row, idx) => ({
                                 'connote_code': idx + 1,
                                 'customer_code': 'WSSAP01294A',
                                 'origin_data_customer_name': findKey(row, ['Pengirim']) || "ANGGUN",
@@ -176,15 +161,15 @@
                                 'ref_no': findKey(row, ['No. AWB', 'No.AWB', 'AWB']) || "",
                                 'Jenis_Barang': 'Paket',
                                 'statusRetur': 'Kembali ke pengirim',
-                                'INS': null // Blank asli
+                                'INS': null // Blank asli untuk Mile App
                             })).sort((a, b) => a.destination_data_customer_name.localeCompare(b.destination_data_customer_name));
 
-                            saveFile(nonCodTemplate, `template_noncod_sapx_${today}.xlsx`);
-                            addLog(`Non-COD Berhasil: ${filteredData.length} baris.`);
+                            saveExcel(nonCodTemplate, `template_noncod_sapx_${today}.xlsx`);
+                            addLog(`Non-COD Sukses: ${filtered.length} baris diproses.`);
                         }
                     }
                     
-                    addLog("Selesai. File otomatis terunduh.");
+                    addLog("Selesai! Silakan cek folder Downloads.");
                     fileInput.value = ""; 
                 } catch (err) {
                     addLog("Gagal: " + err.message, false);
@@ -193,11 +178,38 @@
             reader.readAsArrayBuffer(file);
         }
 
-        function addLog(message, isSuccess = true) {
+        // --- Fungsi Auto-Fit Column Width ---
+        function setAutoWidth(ws, data) {
+            if (!data || data.length === 0) return;
+            const keys = Object.keys(data[0]);
+            const colWidths = keys.map(key => {
+                // Header length
+                let maxLen = key.toString().length;
+                // Data length (cek 50 baris pertama untuk performa)
+                data.slice(0, 50).forEach(row => {
+                    let val = row[key];
+                    if (val === null || val === undefined) val = "";
+                    let currentLen = val.toString().length;
+                    if (currentLen > maxLen) maxLen = currentLen;
+                });
+                return { wch: Math.min(maxLen + 2, 60) }; // Padding +2, Max 60
+            });
+            ws['!cols'] = colWidths;
+        }
+
+        function saveExcel(data, fileName) {
+            const newWs = XLSX.utils.json_to_sheet(data);
+            setAutoWidth(newWs, data); // Terapkan Auto-Width
+            const newWb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(newWb, newWs, "Sheet1");
+            XLSX.writeFile(newWb, fileName);
+        }
+
+        function addLog(msg, success = true) {
             statusContainer.classList.remove('hidden');
             const li = document.createElement('li');
-            li.className = isSuccess ? "flex items-center text-green-600" : "flex items-center text-red-500";
-            li.innerHTML = `<span class="mr-2">${isSuccess ? '✅' : '❌'}</span> ${message}`;
+            li.className = success ? "text-green-600 font-medium" : "text-red-500 font-bold";
+            li.innerHTML = `<span>${success ? '✅' : '❌'}</span> ${msg}`;
             statusList.appendChild(li);
         }
 
@@ -215,13 +227,6 @@
             const cleanStr = String(val).replace(/Rp/gi, '').replace(/\./g, '').replace(/,/g, '').trim();
             const num = parseInt(cleanStr, 10);
             return isNaN(num) ? 0 : num;
-        }
-
-        function saveFile(data, fileName) {
-            const newWs = XLSX.utils.json_to_sheet(data);
-            const newWb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(newWb, newWs, "Sheet1");
-            XLSX.writeFile(newWb, fileName);
         }
     </script>
 </body>
