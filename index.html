@@ -10,10 +10,11 @@
         .pos-orange { background-color: #ff6600; }
         .pos-orange-text { color: #ff6600; }
         .border-pos { border-color: #ff6600; }
+        .hover-pos:hover { background-color: #e65c00; }
         #dropZone.dragover {
             background-color: #fff7ed;
             border-color: #ff6600;
-            transform: scale(1.01);
+            transform: scale(1.02);
         }
     </style>
 </head>
@@ -29,19 +30,38 @@
     <main class="flex-grow flex flex-col items-center justify-center p-6">
         <div class="bg-white rounded-2xl shadow-xl p-8 max-w-3xl w-full text-center border border-gray-100">
             <h1 class="text-3xl font-extrabold text-gray-800 mb-2">Mile App Template Converter</h1>
-            <p class="text-gray-500 mb-8 font-medium italic text-sm text-orange-600">Update: Auto-Fit Column Width (Tampilan Rapi)</p>
+            <p class="text-gray-500 mb-8 font-medium italic text-sm text-orange-600">Update: Preview File, Tombol Proses & Auto-Fit Column</p>
 
-            <div id="dropZone" class="group border-4 border-dashed border-gray-200 rounded-2xl p-12 bg-gray-50 hover:bg-orange-50 hover:border-pos transition-all duration-300 cursor-pointer relative">
-                <input type="file" id="fileUpload" accept=".xlsx, .xls" class="hidden" />
-                <label for="fileUpload" class="cursor-pointer flex flex-col items-center">
-                    <div class="bg-orange-100 p-4 rounded-full mb-4 group-hover:scale-110 transition-transform pointer-events-none">
-                        <svg class="w-12 h-12 pos-orange-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                        </svg>
+            <div id="dropZone" class="group border-4 border-dashed border-gray-200 rounded-2xl p-10 bg-gray-50 hover:bg-orange-50 hover:border-pos transition-all duration-300 relative">
+                
+                <div id="uploadPrompt" class="flex flex-col items-center">
+                    <input type="file" id="fileUpload" accept=".xlsx, .xls" class="hidden" />
+                    <label for="fileUpload" class="cursor-pointer flex flex-col items-center w-full">
+                        <div class="bg-orange-100 p-4 rounded-full mb-4 group-hover:scale-110 transition-transform pointer-events-none">
+                            <svg class="w-12 h-12 pos-orange-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                        </div>
+                        <span class="text-xl font-bold text-gray-700 pointer-events-none">Tarik & Lepas File Excel di Sini</span>
+                        <span class="text-sm text-gray-400 mt-2 pointer-events-none font-medium">Atau klik untuk memilih file manual</span>
+                    </label>
+                </div>
+
+                <div id="filePreview" class="hidden flex flex-col items-center justify-center w-full">
+                    <div class="flex items-center justify-between bg-white border-2 border-orange-200 p-4 rounded-xl w-full max-w-md shadow-sm">
+                        <div class="flex items-center overflow-hidden">
+                            <svg class="w-8 h-8 text-green-500 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"></path></svg>
+                            <span id="fileNameDisplay" class="font-semibold text-gray-700 truncate">namafile.xlsx</span>
+                        </div>
+                        <button id="removeFileBtn" class="ml-4 p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors flex-shrink-0" title="Hapus File">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
                     </div>
-                    <span class="text-xl font-bold text-gray-700 pointer-events-none">Tarik & Lepas File Excel di Sini</span>
-                    <span class="text-sm text-gray-400 mt-2 pointer-events-none font-medium text-center">Data kosong akan otomatis diabaikan & kolom INS dikosongkan murni.</span>
-                </label>
+                    <button id="processBtn" class="mt-6 pos-orange hover-pos text-white font-bold py-3 px-8 rounded-full shadow-lg transform transition hover:-translate-y-1 w-full max-w-md text-lg">
+                        Proses File
+                    </button>
+                </div>
+                
             </div>
 
             <div id="statusContainer" class="mt-8 text-left bg-gray-50 p-6 rounded-xl border border-gray-200 hidden">
@@ -61,8 +81,38 @@
     <script>
         const fileInput = document.getElementById('fileUpload');
         const dropZone = document.getElementById('dropZone');
+        const uploadPrompt = document.getElementById('uploadPrompt');
+        const filePreview = document.getElementById('filePreview');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const removeFileBtn = document.getElementById('removeFileBtn');
+        const processBtn = document.getElementById('processBtn');
+        
         const statusContainer = document.getElementById('statusContainer');
         const statusList = document.getElementById('statusList');
+
+        let currentFile = null;
+
+        // --- Logika UI File Selection ---
+        function setFile(file) {
+            if (!file) return;
+            currentFile = file;
+            fileNameDisplay.textContent = file.name;
+            uploadPrompt.classList.add('hidden');
+            filePreview.classList.remove('hidden');
+            statusContainer.classList.add('hidden'); // Sembunyikan log lama
+            statusList.innerHTML = "";
+        }
+
+        function removeFile(e) {
+            if (e) { e.preventDefault(); e.stopPropagation(); }
+            currentFile = null;
+            fileInput.value = ""; // Reset input file
+            uploadPrompt.classList.remove('hidden');
+            filePreview.classList.add('hidden');
+        }
+
+        // Event Listener Hapus File
+        removeFileBtn.addEventListener('click', removeFile);
 
         // --- Fitur Drag & Drop ---
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -70,21 +120,33 @@
         });
 
         ['dragenter', 'dragover'].forEach(eventName => {
-            dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
+            dropZone.addEventListener(eventName, () => {
+                if(!currentFile) dropZone.classList.add('dragover');
+            }, false);
         });
 
         ['dragleave', 'drop'].forEach(eventName => {
             dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
         });
 
-        dropZone.addEventListener('drop', e => handleFiles(e.dataTransfer.files[0]), false);
-        fileInput.addEventListener('change', e => handleFiles(e.target.files[0]));
+        dropZone.addEventListener('drop', e => {
+            if(!currentFile) setFile(e.dataTransfer.files[0]);
+        }, false);
+        
+        fileInput.addEventListener('change', e => setFile(e.target.files[0]));
 
-        // --- Logika Inti ---
-        function handleFiles(file) {
-            if (!file) return;
+
+        // --- Logika Inti Proses Data ---
+        processBtn.addEventListener('click', () => {
+            if (!currentFile) return;
+            
+            // Ubah tombol jadi loading state
+            processBtn.textContent = "Memproses...";
+            processBtn.disabled = true;
+            processBtn.classList.add('opacity-75', 'cursor-not-allowed');
+
             statusList.innerHTML = "";
-            addLog(`Memulai konversi file: ${file.name}`);
+            addLog(`Membaca file: ${currentFile.name}`);
 
             const reader = new FileReader();
             reader.onload = function(event) {
@@ -124,6 +186,8 @@
 
                             saveExcel(codTemplate, `template_cod_sapx_${today}.xlsx`);
                             addLog(`COD Sukses: ${filtered.length} baris diproses.`);
+                        } else {
+                            addLog(`Sheet COD ditemukan tapi kosong (diabaikan).`, false);
                         }
                     }
 
@@ -166,40 +230,51 @@
 
                             saveExcel(nonCodTemplate, `template_noncod_sapx_${today}.xlsx`);
                             addLog(`Non-COD Sukses: ${filtered.length} baris diproses.`);
+                        } else {
+                            addLog(`Sheet NON COD ditemukan tapi kosong (diabaikan).`, false);
                         }
                     }
                     
-                    addLog("Selesai! Silakan cek folder Downloads.");
-                    fileInput.value = ""; 
+                    addLog("Selesai! File konversi otomatis terunduh.");
+                    
+                    // Kembalikan UI ke state awal setelah selesai
+                    setTimeout(() => {
+                        removeFile();
+                        processBtn.textContent = "Proses File";
+                        processBtn.disabled = false;
+                        processBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+                    }, 2000);
+
                 } catch (err) {
-                    addLog("Gagal: " + err.message, false);
+                    addLog("Terjadi Kesalahan: " + err.message, false);
+                    processBtn.textContent = "Coba Lagi";
+                    processBtn.disabled = false;
+                    processBtn.classList.remove('opacity-75', 'cursor-not-allowed');
                 }
             };
-            reader.readAsArrayBuffer(file);
-        }
+            reader.readAsArrayBuffer(currentFile);
+        });
 
-        // --- Fungsi Auto-Fit Column Width ---
+        // --- Fungsi Bantuan ---
         function setAutoWidth(ws, data) {
             if (!data || data.length === 0) return;
             const keys = Object.keys(data[0]);
             const colWidths = keys.map(key => {
-                // Header length
                 let maxLen = key.toString().length;
-                // Data length (cek 50 baris pertama untuk performa)
                 data.slice(0, 50).forEach(row => {
                     let val = row[key];
                     if (val === null || val === undefined) val = "";
                     let currentLen = val.toString().length;
                     if (currentLen > maxLen) maxLen = currentLen;
                 });
-                return { wch: Math.min(maxLen + 2, 60) }; // Padding +2, Max 60
+                return { wch: Math.min(maxLen + 2, 60) }; 
             });
             ws['!cols'] = colWidths;
         }
 
         function saveExcel(data, fileName) {
             const newWs = XLSX.utils.json_to_sheet(data);
-            setAutoWidth(newWs, data); // Terapkan Auto-Width
+            setAutoWidth(newWs, data); 
             const newWb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(newWb, newWs, "Sheet1");
             XLSX.writeFile(newWb, fileName);
