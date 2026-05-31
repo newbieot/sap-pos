@@ -131,23 +131,66 @@
         letter-spacing: 0.3px;
     }
 </style>
+<style>
+    .dashboard-footer {
+        width: 100%;
+        box-sizing: border-box;
+        background-color: #0f172a; /* Warna gelap Slate khas PosNew Hub */
+        border-top: 3px solid #EF4123; /* Aksen warna Cinnabar PosIND */
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 24px;
+        margin-top: auto; /* Memastikan selalu terdorong ke bawah */
+        font-family: 'Gantari', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        z-index: 20;
+    }
+    .footer-brand {
+        display: flex; align-items: center; gap: 8px;
+        color: #f8fafc; font-weight: 700; font-size: 0.95rem; letter-spacing: 0.5px;
+        font-family: 'Sora', sans-serif; /* Tipografi resmi judul PosIND */
+    }
+    .footer-desc { 
+        color: #94a3b8; font-size: 0.8rem; margin: 0; display: none; 
+    }
+    .footer-creator-badge {
+        display: inline-flex; align-items: center; gap: 6px;
+        background: rgba(239, 65, 35, 0.1); border: 1px solid rgba(239, 65, 35, 0.2);
+        padding: 5px 14px; border-radius: 20px; color: #e2e8f0; font-size: 0.75rem;
+        transition: all 0.3s ease;
+    }
+    .footer-creator-badge:hover { 
+        background: rgba(239, 65, 35, 0.2); border-color: rgba(239, 65, 35, 0.5); 
+    }
+    .footer-creator-badge strong { color: #EF4123; font-weight: 600; }
 
-<footer class="modern-footer">
+    /* RESPONSIVE DESIGN UNTUK MOBILE */
+    @media (min-width: 851px) {
+        .footer-desc { display: block; }
+    }
+    @media (max-width: 850px) {
+        .dashboard-footer { flex-direction: column; gap: 10px; text-align: center; padding: 15px; }
+    }
+</style>
+
+<footer class="dashboard-footer">
     <div class="footer-brand">
-        <i data-lucide="layers" style="color: #FF5722; width: 20px; height: 20px;"></i>
+        <i data-lucide="layers" style="color: #EF4123; width: 18px; height: 18px;"></i>
         PosNew Hub
     </div>
-    <p class="footer-desc">
-        Sistem utilitas ini dikembangkan secara independen untuk optimalisasi efisiensi layanan logistik B2B dan Ritel.
-    </p>
+    <p class="footer-desc">Sistem utilitas ini dikembangkan secara independen untuk optimalisasi efisiensi layanan logistik B2B dan Ritel.</p>
     <div class="footer-creator-badge">
-        <i data-lucide="code-2" style="color: #FF5722; width: 14px; height: 14px;"></i>
+        <i data-lucide="code-2" style="color: #EF4123; width: 14px; height: 14px;"></i>
         Inovasi oleh <strong>Ikhsan Radiansyah</strong> &copy; 2026
     </div>
 </footer>
 
-<!-- Pastikan pemanggil ikon ini tetap ada di paling bawah -->
 <script src="https://unpkg.com/lucide@latest"></script>
+<script>
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+</script>
 <script>
     lucide.createIcons();
 </script>
