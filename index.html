@@ -3,37 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Converter SAP - Corporate Sales KCU Batam by Ikhsan Radiansyah</title>
+    <title>SAP to Mile Converter by Ikhsan Radiansyah | PosNew Hub</title>
     <link rel="icon" type="image/png" href="favicon-sap-pos.png">
+    
+    <!-- Tipografi Resmi PosIND -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Gantari:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    
     <style>
-        .pos-orange { background-color: #ff6600; }
-        .pos-orange-text { color: #ff6600; }
-        .border-pos { border-color: #ff6600; }
-        .hover-pos:hover { background-color: #e65c00; }
+        /* CSS Aplikasi Utama */
+        .pos-orange { background-color: #EF4123; }
+        .pos-orange-text { color: #EF4123; }
+        .border-pos { border-color: #EF4123; }
+        .hover-pos:hover { background-color: #d13215; }
         #dropZone.dragover {
             background-color: #fff7ed;
-            border-color: #ff6600;
+            border-color: #EF4123;
             transform: scale(1.02);
+        }
+
+        /* DASHBOARD FOOTER (UNIVERSAL & MUTLAK 1 BARIS) */
+        .dashboard-footer {
+            width: 100%;
+            box-sizing: border-box;
+            background-color: #0f172a;
+            border-top: 3px solid #EF4123;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 24px;
+            margin-top: auto;
+            font-family: 'Gantari', 'Segoe UI', sans-serif;
+            z-index: 20;
+            height: 60px; /* Mengunci tinggi agar mutlak 1 baris */
+            overflow: hidden;
+        }
+        .footer-brand {
+            display: flex; align-items: center; gap: 8px;
+            color: #f8fafc; font-weight: 700; font-size: 0.95rem; letter-spacing: 0.5px;
+            white-space: nowrap; font-family: 'Sora', sans-serif;
+        }
+        .footer-desc { 
+            color: #94a3b8; font-size: 0.8rem; margin: 0 15px; 
+            white-space: nowrap; /* Mencegah teks turun ke baris kedua */
+            overflow: hidden; text-overflow: ellipsis;
+            text-align: center; flex: 1;
+        }
+        .footer-creator-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: rgba(239, 65, 35, 0.1); border: 1px solid rgba(239, 65, 35, 0.2);
+            padding: 5px 14px; border-radius: 20px; color: #e2e8f0; font-size: 0.75rem;
+            white-space: nowrap; transition: all 0.3s ease;
+        }
+        .footer-creator-badge:hover { 
+            background: rgba(239, 65, 35, 0.2); border-color: rgba(239, 65, 35, 0.5); 
+        }
+        .footer-creator-badge strong { color: #EF4123; font-weight: 600; }
+
+        /* Responsif Mobile */
+        @media (max-width: 850px) {
+            .dashboard-footer { 
+                flex-direction: column; justify-content: center; gap: 8px; 
+                padding: 15px; height: auto; 
+            }
+            .footer-desc { display: none; }
         }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen flex flex-col font-sans">
+<body class="bg-gray-50 min-h-screen flex flex-col" style="font-family: 'Gantari', sans-serif;">
 
     <header class="bg-white shadow-sm p-4 px-6 flex justify-between items-center border-b-4 border-pos">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/Danantara_Indonesia_%28no_SW%29.svg/960px-Danantara_Indonesia_%28no_SW%29.svg.png" 
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Danantara_Indonesia.svg/960px-Danantara_Indonesia.svg.png?_=20250304063014" 
              alt="Logo Danantara" class="h-10 md:h-12 object-contain">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/4/47/POSIND_2023_%28with_wordmark%29.svg" 
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/POSIND_2023.svg/330px-POSIND_2023.svg.png" 
              alt="Logo Pos Indonesia" class="h-10 md:h-12 object-contain">
     </header>
 
     <main class="flex-grow flex flex-col items-center justify-center p-6">
         <div class="bg-white rounded-2xl shadow-xl p-8 max-w-3xl w-full text-center border border-gray-100">
-            <h1 class="text-3xl font-extrabold text-gray-800 mb-2">Mile App Template Converter</h1>
-            <p class="text-gray-500 mb-8 font-medium italic text-sm text-orange-600">Update: Preview File, Tombol Proses & Auto-Fit Column</p>
+            <h1 class="text-3xl font-extrabold text-gray-800 mb-2" style="font-family: 'Sora', sans-serif;">Mile App Template Converter</h1>
+            <p class="text-gray-500 mb-8 font-medium italic text-sm pos-orange-text">Otomatisasi Data Manifes Spesifik (SAP)</p>
 
-            <div id="dropZone" class="group border-4 border-dashed border-gray-200 rounded-2xl p-10 bg-gray-50 hover:bg-orange-50 hover:border-pos transition-all duration-300 relative">
+            <div id="dropZone" class="group border-4 border-dashed border-gray-200 rounded-2xl p-10 bg-gray-50 hover:bg-orange-50 transition-all duration-300 relative">
                 
                 <div id="uploadPrompt" class="flex flex-col items-center">
                     <input type="file" id="fileUpload" accept=".xlsx, .xls" class="hidden" />
@@ -74,128 +129,21 @@
             </div>
         </div>
     </main>
-<!-- Modern SaaS Footer (SLIM, DARK & FULL-WIDTH) -->
-<style>
-    .modern-footer {
-        width: 100%; /* Memaksa footer memanjang dari ujung ke ujung */
-        box-sizing: border-box; /* Mencegah footer tumpah keluar layar */
-        margin-top: 4rem; 
-        padding: 2rem 1rem 1.5rem 1rem; 
-        background-color: #0f172a; 
-        border-top: 4px solid #FF5722; 
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 0.8rem; 
-        font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-    .footer-brand {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        color: #f8fafc; 
-        font-weight: 700;
-        font-size: 1.1rem;
-        letter-spacing: 0.5px;
-    }
-    .footer-desc {
-        color: #94a3b8; 
-        font-size: 0.85rem;
-        text-align: center;
-        max-width: 500px;
-        line-height: 1.5;
-        margin: 0;
-    }
-    .footer-creator-badge {
-        margin-top: 0.5rem;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        background: rgba(255, 87, 34, 0.1);
-        border: 1px solid rgba(255, 87, 34, 0.2);
-        padding: 6px 16px; 
-        border-radius: 30px;
-        color: #e2e8f0;
-        font-size: 0.8rem;
-        transition: all 0.3s ease;
-    }
-    .footer-creator-badge:hover {
-        background: rgba(255, 87, 34, 0.2);
-        border-color: rgba(255, 87, 34, 0.5);
-        box-shadow: 0 0 10px rgba(255, 87, 34, 0.2);
-        transform: translateY(-2px);
-    }
-    .footer-creator-badge strong {
-        color: #FF5722;
-        font-weight: 600;
-        letter-spacing: 0.3px;
-    }
-</style>
-<style>
-    .dashboard-footer {
-        width: 100%;
-        box-sizing: border-box;
-        background-color: #0f172a; /* Warna gelap Slate khas PosNew Hub */
-        border-top: 3px solid #EF4123; /* Aksen warna Cinnabar PosIND */
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 12px 24px;
-        margin-top: auto; /* Memastikan selalu terdorong ke bawah */
-        font-family: 'Gantari', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        z-index: 20;
-    }
-    .footer-brand {
-        display: flex; align-items: center; gap: 8px;
-        color: #f8fafc; font-weight: 700; font-size: 0.95rem; letter-spacing: 0.5px;
-        font-family: 'Sora', sans-serif; /* Tipografi resmi judul PosIND */
-    }
-    .footer-desc { 
-        color: #94a3b8; font-size: 0.8rem; margin: 0; display: none; 
-    }
-    .footer-creator-badge {
-        display: inline-flex; align-items: center; gap: 6px;
-        background: rgba(239, 65, 35, 0.1); border: 1px solid rgba(239, 65, 35, 0.2);
-        padding: 5px 14px; border-radius: 20px; color: #e2e8f0; font-size: 0.75rem;
-        transition: all 0.3s ease;
-    }
-    .footer-creator-badge:hover { 
-        background: rgba(239, 65, 35, 0.2); border-color: rgba(239, 65, 35, 0.5); 
-    }
-    .footer-creator-badge strong { color: #EF4123; font-weight: 600; }
 
-    /* RESPONSIVE DESIGN UNTUK MOBILE */
-    @media (min-width: 851px) {
-        .footer-desc { display: block; }
-    }
-    @media (max-width: 850px) {
-        .dashboard-footer { flex-direction: column; gap: 10px; text-align: center; padding: 15px; }
-    }
-</style>
+    <!-- FOOTER DASHBOARD -->
+    <footer class="dashboard-footer">
+        <div class="footer-brand">
+            <i data-lucide="layers" style="color: #EF4123; width: 18px; height: 18px;"></i>
+            PosNew Hub
+        </div>
+        <p class="footer-desc">Sistem utilitas ini dikembangkan secara independen untuk optimalisasi efisiensi layanan logistik B2B dan Ritel.</p>
+        <div class="footer-creator-badge">
+            <i data-lucide="code-2" style="color: #EF4123; width: 14px; height: 14px;"></i>
+            Inovasi oleh <strong>Ikhsan Radiansyah</strong> &copy; 2026
+        </div>
+    </footer>
 
-<footer class="dashboard-footer">
-    <div class="footer-brand">
-        <i data-lucide="layers" style="color: #EF4123; width: 18px; height: 18px;"></i>
-        PosNew Hub
-    </div>
-    <p class="footer-desc">Sistem utilitas ini dikembangkan secara independen untuk optimalisasi efisiensi layanan logistik B2B dan Ritel.</p>
-    <div class="footer-creator-badge">
-        <i data-lucide="code-2" style="color: #EF4123; width: 14px; height: 14px;"></i>
-        Inovasi oleh <strong>Ikhsan Radiansyah</strong> &copy; 2026
-    </div>
-</footer>
-
-<script src="https://unpkg.com/lucide@latest"></script>
-
-<script src="https://unpkg.com/lucide@latest"></script>
-<script>
-    if (typeof lucide !== 'undefined') {
-        lucide.createIcons();
-    }
-</script>
-<script>
-    lucide.createIcons();
-</script>
+    <!-- SCRIPT LOGIKA APLIKASI -->
     <script>
         const fileInput = document.getElementById('fileUpload');
         const dropZone = document.getElementById('dropZone');
@@ -210,29 +158,26 @@
 
         let currentFile = null;
 
-        // --- Logika UI File Selection ---
         function setFile(file) {
             if (!file) return;
             currentFile = file;
             fileNameDisplay.textContent = file.name;
             uploadPrompt.classList.add('hidden');
             filePreview.classList.remove('hidden');
-            statusContainer.classList.add('hidden'); // Sembunyikan log lama
+            statusContainer.classList.add('hidden'); 
             statusList.innerHTML = "";
         }
 
         function removeFile(e) {
             if (e) { e.preventDefault(); e.stopPropagation(); }
             currentFile = null;
-            fileInput.value = ""; // Reset input file
+            fileInput.value = ""; 
             uploadPrompt.classList.remove('hidden');
             filePreview.classList.add('hidden');
         }
 
-        // Event Listener Hapus File
         removeFileBtn.addEventListener('click', removeFile);
 
-        // --- Fitur Drag & Drop ---
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
             dropZone.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false);
         });
@@ -253,12 +198,9 @@
         
         fileInput.addEventListener('change', e => setFile(e.target.files[0]));
 
-
-        // --- Logika Inti Proses Data ---
         processBtn.addEventListener('click', () => {
             if (!currentFile) return;
             
-            // Ubah tombol jadi loading state
             processBtn.textContent = "Memproses...";
             processBtn.disabled = true;
             processBtn.classList.add('opacity-75', 'cursor-not-allowed');
@@ -273,7 +215,6 @@
                     const workbook = XLSX.read(data, { type: 'array' });
                     const today = new Date().toLocaleDateString('id-ID', {day: '2-digit', month: '2-digit', year: 'numeric'}).replace(/\//g, '');
                     
-                    // 1. Proses Sheet COD
                     if (workbook.SheetNames.includes('COD')) {
                         const ws = workbook.Sheets['COD'];
                         const jsonData = XLSX.utils.sheet_to_json(ws, { range: 2, defval: "" });
@@ -299,7 +240,7 @@
                                 'Jenis_Barang': 'PAKET',
                                 'COD': 'COD',
                                 'statusRetur': 0,
-                                'INS': null // Blank asli untuk Mile App
+                                'INS': null 
                             })).sort((a, b) => a.harga_barang - b.harga_barang);
 
                             saveExcel(codTemplate, `template_cod_sapx_${today}.xlsx`);
@@ -309,7 +250,6 @@
                         }
                     }
 
-                    // 2. Proses Sheet NON COD
                     if (workbook.SheetNames.includes('NON COD (SPESIAL HANDLING)')) {
                         const ws = workbook.Sheets['NON COD (SPESIAL HANDLING)'];
                         const jsonData = XLSX.utils.sheet_to_json(ws, { range: 2, defval: "" });
@@ -343,7 +283,7 @@
                                 'ref_no': findKey(row, ['No. AWB', 'No.AWB', 'AWB']) || "",
                                 'Jenis_Barang': 'Paket',
                                 'statusRetur': 'Kembali ke pengirim',
-                                'INS': null // Blank asli untuk Mile App
+                                'INS': null 
                             })).sort((a, b) => a.destination_data_customer_name.localeCompare(b.destination_data_customer_name));
 
                             saveExcel(nonCodTemplate, `template_noncod_sapx_${today}.xlsx`);
@@ -355,7 +295,6 @@
                     
                     addLog("Selesai! File konversi otomatis terunduh.");
                     
-                    // Kembalikan UI ke state awal setelah selesai
                     setTimeout(() => {
                         removeFile();
                         processBtn.textContent = "Proses File";
@@ -373,7 +312,6 @@
             reader.readAsArrayBuffer(currentFile);
         });
 
-        // --- Fungsi Bantuan ---
         function setAutoWidth(ws, data) {
             if (!data || data.length === 0) return;
             const keys = Object.keys(data[0]);
@@ -423,5 +361,12 @@
         }
     </script>
 
+    <!-- Script Lucide Icons (Tunggal & Bersih) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
+    </script>
 </body>
 </html>
