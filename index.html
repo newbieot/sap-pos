@@ -74,11 +74,83 @@
             </div>
         </div>
     </main>
+<!-- Modern SaaS Footer (SLIM, DARK & FULL-WIDTH) -->
+<style>
+    .modern-footer {
+        width: 100%; /* Memaksa footer memanjang dari ujung ke ujung */
+        box-sizing: border-box; /* Mencegah footer tumpah keluar layar */
+        margin-top: 4rem; 
+        padding: 2rem 1rem 1.5rem 1rem; 
+        background-color: #0f172a; 
+        border-top: 4px solid #FF5722; 
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.8rem; 
+        font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .footer-brand {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #f8fafc; 
+        font-weight: 700;
+        font-size: 1.1rem;
+        letter-spacing: 0.5px;
+    }
+    .footer-desc {
+        color: #94a3b8; 
+        font-size: 0.85rem;
+        text-align: center;
+        max-width: 500px;
+        line-height: 1.5;
+        margin: 0;
+    }
+    .footer-creator-badge {
+        margin-top: 0.5rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(255, 87, 34, 0.1);
+        border: 1px solid rgba(255, 87, 34, 0.2);
+        padding: 6px 16px; 
+        border-radius: 30px;
+        color: #e2e8f0;
+        font-size: 0.8rem;
+        transition: all 0.3s ease;
+    }
+    .footer-creator-badge:hover {
+        background: rgba(255, 87, 34, 0.2);
+        border-color: rgba(255, 87, 34, 0.5);
+        box-shadow: 0 0 10px rgba(255, 87, 34, 0.2);
+        transform: translateY(-2px);
+    }
+    .footer-creator-badge strong {
+        color: #FF5722;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+    }
+</style>
 
-    <footer class="bg-gray-800 text-white p-6 text-center">
-        <p class="text-sm opacity-80 font-medium">Inovasi oleh : Ikhsan Radiansyah</p>
-    </footer>
+<footer class="modern-footer">
+    <div class="footer-brand">
+        <i data-lucide="layers" style="color: #FF5722; width: 20px; height: 20px;"></i>
+        PosNew Hub
+    </div>
+    <p class="footer-desc">
+        Sistem utilitas ini dikembangkan secara independen untuk optimalisasi efisiensi layanan logistik B2B dan Ritel.
+    </p>
+    <div class="footer-creator-badge">
+        <i data-lucide="code-2" style="color: #FF5722; width: 14px; height: 14px;"></i>
+        Inovasi oleh <strong>Ikhsan Radiansyah</strong> &copy; 2026
+    </div>
+</footer>
 
+<!-- Pastikan pemanggil ikon ini tetap ada di paling bawah -->
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+    lucide.createIcons();
+</script>
     <script>
         const fileInput = document.getElementById('fileUpload');
         const dropZone = document.getElementById('dropZone');
