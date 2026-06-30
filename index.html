@@ -226,7 +226,8 @@
                         if (filtered.length > 0) {
                             const codTemplate = filtered.map(row => ({
                                 'nama_penerima': findKey(row, ['Penerima']) || "",
-                                'telp_penerima': findKey(row, ['Tlp1', 'Telepon']) || "",
+                                // Mengubah telp menjadi format string murni
+                                'telp_penerima': String(findKey(row, ['Tlp1', 'Telepon']) || ""),
                                 'alamat_penerima': findKey(row, ['Alamat Penerima', 'Alamat']) || "",
                                 'zip_code_penerima': '29411',
                                 'zona_penerima': '29400',
@@ -234,9 +235,11 @@
                                 'koli_weight': findKey(row, ['Berat']) || "1",
                                 'koli_width': 10, 'koli_height': 10, 'koli_length': 10,
                                 'account_pgm': '0166648410',
-                                'instruksi_pengiriman': findKey(row, ['No. AWB', 'No.AWB', 'AWB']) || "",
+                                // Mengubah instruksi pengiriman menjadi string murni
+                                'instruksi_pengiriman': String(findKey(row, ['No. AWB', 'No.AWB', 'AWB']) || ""),
                                 'harga_barang': cleanCurrency(findKey(row, ['Nilai COD', 'COD'])),
-                                'ref_no': findKey(row, ['No. AWB', 'No.AWB', 'AWB']) || "",
+                                // Mengubah ref_no menjadi format string murni
+                                'ref_no': String(findKey(row, ['No. AWB', 'No.AWB', 'AWB']) || ""),
                                 'Jenis_Barang': 'PAKET',
                                 'COD': 'COD',
                                 'statusRetur': 0,
@@ -268,7 +271,8 @@
                                 'origin_data_customer_zip_code': '29411',
                                 'origin_data_zone_code': '29400',
                                 'destination_data_customer_name': findKey(row, ['Penerima']) || "",
-                                'destination_data_customer_phone': findKey(row, ['Tlp1', 'Telepon']) || "",
+                                // Mengubah telp menjadi format string murni
+                                'destination_data_customer_phone': String(findKey(row, ['Tlp1', 'Telepon']) || ""),
                                 'destination_data_customer_address': findKey(row, ['Alamat Penerima', 'Alamat']) || "",
                                 'destination_data_customer_zip_code': '29411',
                                 'destination_data_zone_code': '29400',
@@ -280,7 +284,8 @@
                                 'transaction_payment_type_name': 'INVOICE',
                                 'instruksi_pengiriman': 'Tolong diantar dengan baik',
                                 'harga_barang': 0,
-                                'ref_no': findKey(row, ['No. AWB', 'No.AWB', 'AWB']) || "",
+                                // Mengubah ref_no menjadi format string murni
+                                'ref_no': String(findKey(row, ['No. AWB', 'No.AWB', 'AWB']) || ""),
                                 'Jenis_Barang': 'Paket',
                                 'statusRetur': 'Kembali ke pengirim',
                                 'INS': null 
