@@ -1,0 +1,14 @@
+{
+  "name": "SAPX to MILE Converter",
+  "short_name": "SAPX Converter",
+  "description": "Convert SAPX COD and Non-COD workbooks into validated MILE-ready templates.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#eef2f7",
+  "theme_color": "#172554",
+  "icons": [
+    {"src":"/favicon-32x32.png","sizes":"32x32","type":"image/png"},
+    {"src":"/apple-touch-icon.png","sizes":"180x180","type":"image/png"}
+  ]
+}

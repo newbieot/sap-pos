@@ -1,0 +1,13 @@
+{
+  "name": "sapx-to-mile-converter",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Static browser-based SAPX to MILE workbook converter",
+  "scripts": {
+    "test": "node tests/run-tests.js && python tests/static-audit.py",
+    "test:browser": "python tests/browser-regression.py"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

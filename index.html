@@ -1,377 +1,312 @@
-<!DOCTYPE html>
-<html lang="id">
+<!doctype html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SAP to Mile Converter by Ikhsan Radiansyah | PosNew Hub</title>
-    <link rel="icon" type="image/png" href="favicon-sap-pos.png">
-    
-    <!-- Tipografi Resmi PosIND -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Gantari:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-    
-    <style>
-        /* CSS Aplikasi Utama */
-        .pos-orange { background-color: #EF4123; }
-        .pos-orange-text { color: #EF4123; }
-        .border-pos { border-color: #EF4123; }
-        .hover-pos:hover { background-color: #d13215; }
-        #dropZone.dragover {
-            background-color: #fff7ed;
-            border-color: #EF4123;
-            transform: scale(1.02);
-        }
-
-        /* DASHBOARD FOOTER (UNIVERSAL & MUTLAK 1 BARIS) */
-        .dashboard-footer {
-            width: 100%;
-            box-sizing: border-box;
-            background-color: #0f172a;
-            border-top: 3px solid #EF4123;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 24px;
-            margin-top: auto;
-            font-family: 'Gantari', 'Segoe UI', sans-serif;
-            z-index: 20;
-            height: 60px; /* Mengunci tinggi agar mutlak 1 baris */
-            overflow: hidden;
-        }
-        .footer-brand {
-            display: flex; align-items: center; gap: 8px;
-            color: #f8fafc; font-weight: 700; font-size: 0.95rem; letter-spacing: 0.5px;
-            white-space: nowrap; font-family: 'Sora', sans-serif;
-        }
-        .footer-desc { 
-            color: #94a3b8; font-size: 0.8rem; margin: 0 15px; 
-            white-space: nowrap; /* Mencegah teks turun ke baris kedua */
-            overflow: hidden; text-overflow: ellipsis;
-            text-align: center; flex: 1;
-        }
-        .footer-creator-badge {
-            display: inline-flex; align-items: center; gap: 6px;
-            background: rgba(239, 65, 35, 0.1); border: 1px solid rgba(239, 65, 35, 0.2);
-            padding: 5px 14px; border-radius: 20px; color: #e2e8f0; font-size: 0.75rem;
-            white-space: nowrap; transition: all 0.3s ease;
-        }
-        .footer-creator-badge:hover { 
-            background: rgba(239, 65, 35, 0.2); border-color: rgba(239, 65, 35, 0.5); 
-        }
-        .footer-creator-badge strong { color: #EF4123; font-weight: 600; }
-
-        /* Responsif Mobile */
-        @media (max-width: 850px) {
-            .dashboard-footer { 
-                flex-direction: column; justify-content: center; gap: 8px; 
-                padding: 15px; height: auto; 
-            }
-            .footer-desc { display: none; }
-        }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>SAPX to MILE Converter | PosNew Hub</title>
+  <meta name="description" content="Convert SAPX COD and Non-COD Excel workbooks into clean, validated MILE-ready shipment templates directly in your browser.">
+  <meta name="author" content="Ikhsan Radiansyah">
+  <meta name="application-name" content="SAPX to MILE Converter">
+  <meta name="theme-color" content="#172554">
+  <meta name="color-scheme" content="light">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <link rel="canonical" href="https://sapx.posnew.com/">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-32x32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="PosNew Hub">
+  <meta property="og:title" content="SAPX to MILE Converter | PosNew Hub">
+  <meta property="og:description" content="Inspect, validate, and convert SAPX COD and Non-COD workbooks into MILE-ready Excel templates.">
+  <meta property="og:url" content="https://sapx.posnew.com/">
+  <meta property="og:image" content="https://sapx.posnew.com/og-cover.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="SAPX to MILE Converter workspace">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="SAPX to MILE Converter | PosNew Hub">
+  <meta name="twitter:description" content="Convert SAPX shipment workbooks into validated MILE-ready templates in your browser.">
+  <meta name="twitter:image" content="https://sapx.posnew.com/og-cover.png">
+  <link rel="preconnect" href="https://cdn.sheetjs.com" crossorigin>
+  <link rel="stylesheet" href="/assets/css/app.css?v=20260728-1">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"SoftwareApplication","name":"SAPX to MILE Converter","applicationCategory":"BusinessApplication","operatingSystem":"Web","url":"https://sapx.posnew.com/","description":"A browser-based utility for converting SAPX COD and Non-COD workbooks into validated MILE-ready shipment templates.","author":{"@type":"Person","name":"Ikhsan Radiansyah","url":"https://posnew.com/about-me.html"},"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
+  </script>
 </head>
-<body class="bg-gray-50 min-h-screen flex flex-col" style="font-family: 'Gantari', sans-serif;">
+<body>
+  <a class="skip-link" href="#workspace">Skip to converter workspace</a>
 
-    <header class="bg-white shadow-sm p-4 px-6 flex justify-between items-center border-b-4 border-pos">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Danantara_Indonesia.svg/960px-Danantara_Indonesia.svg.png?_=20250304063014" 
-             alt="Logo Danantara" class="h-10 md:h-12 object-contain">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/POSIND_2023.svg/330px-POSIND_2023.svg.png" 
-             alt="Logo Pos Indonesia" class="h-10 md:h-12 object-contain">
-    </header>
+  <header class="app-header">
+    <div class="header-inner">
+      <a class="brand" href="https://posnew.com/" aria-label="Open PosNew Hub">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M4 7.4 12 3l8 4.4v9.2L12 21l-8-4.4V7.4Z"/><path d="m4.5 7.6 7.5 4.2 7.5-4.2M12 12v8.2"/></svg>
+        </span>
+        <span class="brand-copy"><strong>SAPX to MILE Converter</strong><small>Shipment Data Workspace</small></span>
+      </a>
+      <nav class="header-actions" aria-label="Application links">
+        <span class="privacy-pill" title="Workbook data stays in this browser">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.7 2.8 8.2 7 10 4.2-1.8 7-5.3 7-10V6l-7-3Z"/><path d="m9.2 12 1.8 1.8 3.8-4"/></svg>
+          Local processing
+        </span>
+        <a class="header-link" href="#helpPanel">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.3 2.3 0 1 1 3.6 1.9c-.9.6-1.4 1.1-1.4 2.1M12 17h.01"/></svg>
+          Help
+        </a>
+        <a class="header-link" href="https://posnew.com/">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18 9 12l6-6"/></svg>
+          All Tools
+        </a>
+      </nav>
+    </div>
+  </header>
 
-    <main class="flex-grow flex flex-col items-center justify-center p-6">
-        <div class="bg-white rounded-2xl shadow-xl p-8 max-w-3xl w-full text-center border border-gray-100">
-            <h1 class="text-3xl font-extrabold text-gray-800 mb-2" style="font-family: 'Sora', sans-serif;">Mile App Template Converter</h1>
-            <p class="text-gray-500 mb-8 font-medium italic text-sm pos-orange-text">Otomatisasi Data Manifes Spesifik (SAP)</p>
+  <main id="workspace" class="app-main" tabindex="-1">
+    <section class="intro-shell" aria-labelledby="pageTitle">
+      <div class="intro-copy">
+        <span class="eyebrow">Browser-based workbook conversion</span>
+        <h1 id="pageTitle">Turn SAPX shipment data into MILE-ready workbooks.</h1>
+        <p>Upload an SAPX workbook, inspect detected worksheets, validate shipment records, and download clean COD and Non-COD output files.</p>
+      </div>
+      <ol class="workflow-steps" aria-label="Conversion progress">
+        <li class="workflow-step is-active" data-step="1"><span>1</span><strong>Upload</strong><small>Select workbook</small></li>
+        <li class="workflow-step" data-step="2"><span>2</span><strong>Inspect</strong><small>Find worksheets</small></li>
+        <li class="workflow-step" data-step="3"><span>3</span><strong>Validate</strong><small>Review records</small></li>
+        <li class="workflow-step" data-step="4"><span>4</span><strong>Download</strong><small>Get outputs</small></li>
+      </ol>
+    </section>
 
-            <div id="dropZone" class="group border-4 border-dashed border-gray-200 rounded-2xl p-10 bg-gray-50 hover:bg-orange-50 transition-all duration-300 relative">
-                
-                <div id="uploadPrompt" class="flex flex-col items-center">
-                    <input type="file" id="fileUpload" accept=".xlsx, .xls" class="hidden" />
-                    <label for="fileUpload" class="cursor-pointer flex flex-col items-center w-full">
-                        <div class="bg-orange-100 p-4 rounded-full mb-4 group-hover:scale-110 transition-transform pointer-events-none">
-                            <svg class="w-12 h-12 pos-orange-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                            </svg>
-                        </div>
-                        <span class="text-xl font-bold text-gray-700 pointer-events-none">Tarik & Lepas File Excel di Sini</span>
-                        <span class="text-sm text-gray-400 mt-2 pointer-events-none font-medium">Atau klik untuk memilih file manual</span>
-                    </label>
-                </div>
+    <section class="workspace-grid" aria-label="SAPX workbook converter">
+      <aside class="control-column">
+        <section class="panel-card panel-card--accent" aria-labelledby="uploadTitle">
+          <div class="panel-heading">
+            <div><span class="section-index">01</span><h2 id="uploadTitle">Upload Workbook</h2></div>
+            <p>Select one SAPX Excel workbook. The file is read locally and never uploaded.</p>
+          </div>
 
-                <div id="filePreview" class="hidden flex flex-col items-center justify-center w-full">
-                    <div class="flex items-center justify-between bg-white border-2 border-orange-200 p-4 rounded-xl w-full max-w-md shadow-sm">
-                        <div class="flex items-center overflow-hidden">
-                            <svg class="w-8 h-8 text-green-500 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"></path></svg>
-                            <span id="fileNameDisplay" class="font-semibold text-gray-700 truncate">namafile.xlsx</span>
-                        </div>
-                        <button id="removeFileBtn" class="ml-4 p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors flex-shrink-0" title="Hapus File">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                        </button>
-                    </div>
-                    <button id="processBtn" class="mt-6 pos-orange hover-pos text-white font-bold py-3 px-8 rounded-full shadow-lg transform transition hover:-translate-y-1 w-full max-w-md text-lg">
-                        Proses File
-                    </button>
-                </div>
-                
+          <button id="dropZone" class="drop-zone" type="button" aria-describedby="uploadHelp">
+            <span class="drop-zone-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5"/><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>
+            </span>
+            <span class="drop-zone-copy"><strong>Drop your SAPX workbook here</strong><small id="uploadHelp">Accepted formats: XLSX and XLS · Maximum 50 MB</small></span>
+            <span class="browse-chip">Browse Workbook</span>
+          </button>
+          <input id="fileInput" type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" hidden>
+
+          <div id="fileCard" class="file-card" hidden>
+            <div class="file-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M14 3v5h5M8.5 13h7M8.5 16h7M8.5 10h2"/></svg>
             </div>
-
-            <div id="statusContainer" class="mt-8 text-left bg-gray-50 p-6 rounded-xl border border-gray-200 hidden">
-                <h3 class="font-bold text-gray-800 mb-3 flex items-center">
-                    <span class="pos-orange w-2 h-6 rounded-full mr-2"></span>
-                    Log Aktivitas
-                </h3>
-                <ul id="statusList" class="space-y-2 text-sm text-gray-600"></ul>
+            <div class="file-copy">
+              <strong id="fileName">workbook.xlsx</strong>
+              <span id="fileDetails">0 KB · XLSX</span>
+              <small id="fileModified">Modified date unavailable</small>
             </div>
-        </div>
-    </main>
+            <div class="file-actions">
+              <button id="replaceFileButton" class="icon-button" type="button" title="Replace workbook" aria-label="Replace workbook">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7h-5V2M4 17h5v5"/><path d="M18.4 5.6A8 8 0 0 0 5.1 9M5.6 18.4A8 8 0 0 0 18.9 15"/></svg>
+              </button>
+              <button id="removeFileButton" class="icon-button icon-button--danger" type="button" title="Remove workbook" aria-label="Remove workbook">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h12M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5m4-5v5"/></svg>
+              </button>
+            </div>
+          </div>
 
-    <!-- FOOTER DASHBOARD -->
-    <footer class="dashboard-footer">
-        <div class="footer-brand">
-            <i data-lucide="layers" style="color: #EF4123; width: 18px; height: 18px;"></i>
-            PosNew Hub
-        </div>
-        <p class="footer-desc">Sistem utilitas ini dikembangkan secara independen untuk optimalisasi efisiensi layanan logistik B2B dan Ritel.</p>
-        <div class="footer-creator-badge">
-            <i data-lucide="code-2" style="color: #EF4123; width: 14px; height: 14px;"></i>
-            Inovasi oleh <strong>Ikhsan Radiansyah</strong> &copy; 2026
-        </div>
-    </footer>
+          <div id="libraryNotice" class="dependency-notice" role="status" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5m0 3h.01"/></svg>
+            <div><strong>Spreadsheet engine unavailable</strong><p>Refresh the page and verify that cdn.sheetjs.com is not blocked.</p></div>
+          </div>
 
-    <!-- SCRIPT LOGIKA APLIKASI -->
-    <script>
-        const fileInput = document.getElementById('fileUpload');
-        const dropZone = document.getElementById('dropZone');
-        const uploadPrompt = document.getElementById('uploadPrompt');
-        const filePreview = document.getElementById('filePreview');
-        const fileNameDisplay = document.getElementById('fileNameDisplay');
-        const removeFileBtn = document.getElementById('removeFileBtn');
-        const processBtn = document.getElementById('processBtn');
-        
-        const statusContainer = document.getElementById('statusContainer');
-        const statusList = document.getElementById('statusList');
+          <button id="processButton" class="button button--primary button--wide" type="button" disabled>
+            <span class="button-label">Generate MILE Workbooks</span>
+            <span class="button-spinner" aria-hidden="true"></span>
+          </button>
+        </section>
 
-        let currentFile = null;
+        <section id="workbookPanel" class="panel-card" aria-labelledby="workbookTitle">
+          <div class="panel-heading panel-heading--compact">
+            <div><span class="section-index">02</span><h2 id="workbookTitle">Workbook Inspection</h2></div>
+          </div>
+          <div id="workbookEmpty" class="empty-state empty-state--compact">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4z"/><path d="M4 9h16M8 5v14M12 5v14M16 5v14"/></svg>
+            <p>Worksheet details will appear after you select a workbook.</p>
+          </div>
+          <div id="workbookDetails" hidden>
+            <div class="inspection-meta">
+              <span>Detected sheets</span><strong id="sheetCount">0</strong>
+              <span>Additional sheets</span><strong id="extraSheetCount">0</strong>
+            </div>
+            <div class="sheet-list">
+              <article class="sheet-item" id="codSheetItem">
+                <span class="sheet-icon" aria-hidden="true">C</span>
+                <div><strong>COD</strong><small id="codSheetDetail">Not detected</small></div>
+                <span id="codSheetBadge" class="status-badge status-badge--neutral">Missing</span>
+              </article>
+              <article class="sheet-item" id="nonCodSheetItem">
+                <span class="sheet-icon" aria-hidden="true">N</span>
+                <div><strong>NON COD (SPESIAL HANDLING)</strong><small id="nonCodSheetDetail">Not detected</small></div>
+                <span id="nonCodSheetBadge" class="status-badge status-badge--neutral">Missing</span>
+              </article>
+            </div>
+            <details id="additionalSheets" class="details-block" hidden>
+              <summary>Additional worksheets</summary>
+              <ul id="additionalSheetList"></ul>
+            </details>
+          </div>
+        </section>
 
-        function setFile(file) {
-            if (!file) return;
-            currentFile = file;
-            fileNameDisplay.textContent = file.name;
-            uploadPrompt.classList.add('hidden');
-            filePreview.classList.remove('hidden');
-            statusContainer.classList.add('hidden'); 
-            statusList.innerHTML = "";
-        }
+        <section id="helpPanel" class="panel-card help-card" aria-labelledby="helpTitle">
+          <div class="panel-heading panel-heading--compact">
+            <div><span class="section-index">03</span><h2 id="helpTitle">Workbook Requirements</h2></div>
+          </div>
+          <div class="help-grid">
+            <div><strong>Supported sheets</strong><span>COD and NON COD (SPESIAL HANDLING)</span></div>
+            <div><strong>Header row</strong><span>Row 3, matching the current SAPX export</span></div>
+            <div><strong>Required record key</strong><span>No. AWB, No.AWB, or AWB</span></div>
+            <div><strong>Privacy</strong><span>Processed only in this browser</span></div>
+          </div>
+        </section>
+      </aside>
 
-        function removeFile(e) {
-            if (e) { e.preventDefault(); e.stopPropagation(); }
-            currentFile = null;
-            fileInput.value = ""; 
-            uploadPrompt.classList.remove('hidden');
-            filePreview.classList.add('hidden');
-        }
+      <section class="review-column" aria-label="Validation, preview, and downloads">
+        <section id="summaryPanel" class="summary-card" tabindex="-1" aria-labelledby="summaryTitle">
+          <div class="summary-heading">
+            <div>
+              <span class="section-index">04</span>
+              <div><h2 id="summaryTitle">Processing Summary</h2><p id="summaryMessage">Select a workbook to begin.</p></div>
+            </div>
+            <button id="clearWorkspaceButton" class="button button--ghost button--compact" type="button" disabled>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h12M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5m4-5v5"/></svg>
+              Clear Workspace
+            </button>
+          </div>
+          <div class="metric-grid" aria-label="Workbook metrics">
+            <div class="metric"><span>Worksheets</span><strong id="metricSheets">0</strong><small>supported detected</small></div>
+            <div class="metric"><span>COD records</span><strong id="metricCod">0</strong><small>valid AWB rows</small></div>
+            <div class="metric"><span>Non-COD records</span><strong id="metricNonCod">0</strong><small>valid AWB rows</small></div>
+            <div class="metric"><span>Skipped</span><strong id="metricSkipped">0</strong><small>missing AWB</small></div>
+            <div class="metric"><span>Warnings</span><strong id="metricWarnings">0</strong><small>review recommended</small></div>
+            <div class="metric"><span>Generated</span><strong id="metricGenerated">0</strong><small>output files</small></div>
+          </div>
+        </section>
 
-        removeFileBtn.addEventListener('click', removeFile);
+        <section class="panel-card validation-card" aria-labelledby="validationTitle">
+          <div class="panel-heading-row">
+            <div class="panel-heading panel-heading--compact">
+              <div><span class="section-index">05</span><h2 id="validationTitle">Validation</h2></div>
+              <p>Warnings do not alter operational values. Rows without AWB remain skipped.</p>
+            </div>
+            <span id="validationBadge" class="status-badge status-badge--neutral">Waiting</span>
+          </div>
+          <div id="validationEmpty" class="empty-state empty-state--compact">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 7v5c0 4.5 2.7 7.8 8 9 5.3-1.2 8-4.5 8-9V7l-8-4Z"/><path d="m9.3 12 1.8 1.8 3.8-4"/></svg>
+            <p>Validation results will appear after workbook inspection.</p>
+          </div>
+          <div id="validationContent" hidden>
+            <div id="validationOverview" class="validation-overview"></div>
+            <div id="issueList" class="issue-list"></div>
+          </div>
+        </section>
 
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false);
-        });
+        <section class="preview-card" aria-labelledby="previewTitle">
+          <div class="preview-toolbar">
+            <div class="preview-title">
+              <span class="section-index">06</span>
+              <div><h2 id="previewTitle">Record Preview</h2><p>Preview uses parsed source records and does not change the generated schema.</p></div>
+            </div>
+            <div class="preview-controls">
+              <label class="search-field" for="previewSearch">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+                <span class="sr-only">Search records</span>
+                <input id="previewSearch" type="search" placeholder="Search AWB or recipient" disabled>
+              </label>
+              <button id="viewAllButton" class="button button--ghost button--compact" type="button" disabled>View All</button>
+            </div>
+          </div>
+          <div class="preview-tabs" role="tablist" aria-label="Preview worksheet">
+            <button id="codTab" class="preview-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="previewRegion" data-preview="cod">COD <span id="codTabCount">0</span></button>
+            <button id="nonCodTab" class="preview-tab" type="button" role="tab" aria-selected="false" aria-controls="previewRegion" data-preview="nonCod">Non-COD <span id="nonCodTabCount">0</span></button>
+          </div>
+          <div id="previewRegion" class="table-region" role="region" aria-label="Shipment record preview" tabindex="0">
+            <div id="previewEmpty" class="empty-state">
+              <span class="empty-illustration" aria-hidden="true">
+                <svg viewBox="0 0 48 48"><rect x="7" y="8" width="34" height="32" rx="5"/><path d="M7 17h34M16 8v32M27 8v32M7 28h34"/></svg>
+              </span>
+              <h3>No records to preview</h3>
+              <p>Upload a supported SAPX workbook to inspect shipment records.</p>
+            </div>
+            <table id="previewTable" hidden>
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div id="previewFooter" class="preview-footer" hidden>
+            <span id="previewCountText">Showing 0 records</span>
+            <span class="privacy-inline"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.7 2.8 8.2 7 10 4.2-1.8 7-5.3 7-10V6l-7-3Z"/></svg>Source data remains local</span>
+          </div>
+        </section>
 
-        ['dragenter', 'dragover'].forEach(eventName => {
-            dropZone.addEventListener(eventName, () => {
-                if(!currentFile) dropZone.classList.add('dragover');
-            }, false);
-        });
+        <section id="resultsPanel" class="panel-card results-card" aria-labelledby="resultsTitle">
+          <div class="panel-heading-row">
+            <div class="panel-heading panel-heading--compact">
+              <div><span class="section-index">07</span><h2 id="resultsTitle">Generated Files</h2></div>
+              <p>Generated workbooks remain available for repeat downloads until the workspace is cleared.</p>
+            </div>
+            <span id="resultsBadge" class="status-badge status-badge--neutral">Not generated</span>
+          </div>
+          <div id="resultsEmpty" class="empty-state empty-state--compact">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
+            <p>Generate MILE workbooks after reviewing the detected records.</p>
+          </div>
+          <div id="generatedFiles" class="generated-files" hidden></div>
+        </section>
 
-        ['dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
-        });
+        <section class="panel-card log-card" aria-labelledby="logTitle">
+          <details id="logDetails" open>
+            <summary>
+              <span><span class="section-index">08</span><strong id="logTitle">Activity Log</strong></span>
+              <span id="logCount">0 events</span>
+            </summary>
+            <ol id="activityLog" class="activity-log" aria-live="polite" aria-relevant="additions"></ol>
+          </details>
+        </section>
+      </section>
+    </section>
+  </main>
 
-        dropZone.addEventListener('drop', e => {
-            if(!currentFile) setFile(e.dataTransfer.files[0]);
-        }, false);
-        
-        fileInput.addEventListener('change', e => setFile(e.target.files[0]));
+  <div id="toastRegion" class="toast-region" aria-live="assertive" aria-atomic="true"></div>
 
-        processBtn.addEventListener('click', () => {
-            if (!currentFile) return;
-            
-            processBtn.textContent = "Memproses...";
-            processBtn.disabled = true;
-            processBtn.classList.add('opacity-75', 'cursor-not-allowed');
+  <dialog id="clearDialog" class="confirm-dialog" aria-labelledby="clearDialogTitle">
+    <form method="dialog">
+      <span class="dialog-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 7h12M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5m4-5v5"/></svg></span>
+      <h2 id="clearDialogTitle">Clear this workspace?</h2>
+      <p>The selected workbook, previews, validation results, generated files, and activity log will be removed.</p>
+      <div class="dialog-actions">
+        <button class="button button--ghost" value="cancel">Cancel</button>
+        <button id="confirmClearButton" class="button button--danger" value="confirm">Clear Workspace</button>
+      </div>
+    </form>
+  </dialog>
 
-            statusList.innerHTML = "";
-            addLog(`Membaca file: ${currentFile.name}`);
+  <footer class="dashboard-footer">
+    <a class="footer-brand" href="https://posnew.com/" aria-label="Open PosNew Hub">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9Z"/><path d="m4.5 7.5 7.5 4.2 7.5-4.2M12 12v8.2"/></svg>
+      PosNew Hub
+    </a>
+    <p class="footer-desc">A faster workspace for converting SAPX shipment data into MILE-ready workbooks.</p>
+    <a class="footer-creator-badge" href="https://posnew.com/about-me.html">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 9-3 3 3 3M16 9l3 3-3 3M14 5l-4 14"/></svg>
+      Created by <strong>Ikhsan Radiansyah</strong> · 2026
+    </a>
+  </footer>
 
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                try {
-                    const data = new Uint8Array(event.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const today = new Date().toLocaleDateString('id-ID', {day: '2-digit', month: '2-digit', year: 'numeric'}).replace(/\//g, '');
-                    
-                    if (workbook.SheetNames.includes('COD')) {
-                        const ws = workbook.Sheets['COD'];
-                        const jsonData = XLSX.utils.sheet_to_json(ws, { range: 2, defval: "" });
-                        const filtered = jsonData.filter(row => {
-                            const awb = findKey(row, ['No. AWB', 'No.AWB', 'AWB']);
-                            return awb && String(awb).trim() !== "";
-                        });
-
-                        if (filtered.length > 0) {
-                            const codTemplate = filtered.map(row => ({
-                                'nama_penerima': findKey(row, ['Penerima']) || "",
-                                // Mengubah telp menjadi format string murni
-                                'telp_penerima': String(findKey(row, ['Tlp1', 'Telepon']) || ""),
-                                'alamat_penerima': findKey(row, ['Alamat Penerima', 'Alamat']) || "",
-                                'zip_code_penerima': '29411',
-                                'zona_penerima': '29400',
-                                'koli_description': findKey(row, ['Keterangan Barang', 'Isi']) || "",
-                                'koli_weight': findKey(row, ['Berat']) || "1",
-                                'koli_width': 10, 'koli_height': 10, 'koli_length': 10,
-                                'account_pgm': '0166648410',
-                                // Mengubah instruksi pengiriman menjadi string murni
-                                'instruksi_pengiriman': String(findKey(row, ['No. AWB', 'No.AWB', 'AWB']) || ""),
-                                'harga_barang': cleanCurrency(findKey(row, ['Nilai COD', 'COD'])),
-                                // Mengubah ref_no menjadi format string murni
-                                'ref_no': String(findKey(row, ['No. AWB', 'No.AWB', 'AWB']) || ""),
-                                'Jenis_Barang': 'PAKET',
-                                'COD': 'COD',
-                                'statusRetur': 0,
-                                'INS': null 
-                            })).sort((a, b) => a.harga_barang - b.harga_barang);
-
-                            saveExcel(codTemplate, `template_cod_sapx_${today}.xlsx`);
-                            addLog(`COD Sukses: ${filtered.length} baris diproses.`);
-                        } else {
-                            addLog(`Sheet COD ditemukan tapi kosong (diabaikan).`, false);
-                        }
-                    }
-
-                    if (workbook.SheetNames.includes('NON COD (SPESIAL HANDLING)')) {
-                        const ws = workbook.Sheets['NON COD (SPESIAL HANDLING)'];
-                        const jsonData = XLSX.utils.sheet_to_json(ws, { range: 2, defval: "" });
-                        const filtered = jsonData.filter(row => {
-                            const awb = findKey(row, ['No. AWB', 'No.AWB', 'AWB']);
-                            return awb && String(awb).trim() !== "";
-                        });
-
-                        if (filtered.length > 0) {
-                            const nonCodTemplate = filtered.map((row, idx) => ({
-                                'connote_code': idx + 1,
-                                'customer_code': 'WSSAP01294A',
-                                'origin_data_customer_name': findKey(row, ['Pengirim']) || "ANGGUN",
-                                'origin_data_customer_phone': '082169602910',
-                                'origin_data_customer_address': 'SAP BATAM',
-                                'origin_data_customer_zip_code': '29411',
-                                'origin_data_zone_code': '29400',
-                                'destination_data_customer_name': findKey(row, ['Penerima']) || "",
-                                // Mengubah telp menjadi format string murni
-                                'destination_data_customer_phone': String(findKey(row, ['Tlp1', 'Telepon']) || ""),
-                                'destination_data_customer_address': findKey(row, ['Alamat Penerima', 'Alamat']) || "",
-                                'destination_data_customer_zip_code': '29411',
-                                'destination_data_zone_code': '29400',
-                                'service_code': 'PKH',
-                                'connote_sub_service_code': '911231',
-                                'koli_data_koli_description': findKey(row, ['Keterangan Barang', 'Isi']) || "",
-                                'koli_data_koli_weight': findKey(row, ['Berat']) || "1",
-                                'koli_data_koli_width': 10, 'koli_data_koli_height': 10, 'koli_data_koli_length': 10,
-                                'transaction_payment_type_name': 'INVOICE',
-                                'instruksi_pengiriman': 'Tolong diantar dengan baik',
-                                'harga_barang': 0,
-                                // Mengubah ref_no menjadi format string murni
-                                'ref_no': String(findKey(row, ['No. AWB', 'No.AWB', 'AWB']) || ""),
-                                'Jenis_Barang': 'Paket',
-                                'statusRetur': 'Kembali ke pengirim',
-                                'INS': null 
-                            })).sort((a, b) => a.destination_data_customer_name.localeCompare(b.destination_data_customer_name));
-
-                            saveExcel(nonCodTemplate, `template_noncod_sapx_${today}.xlsx`);
-                            addLog(`Non-COD Sukses: ${filtered.length} baris diproses.`);
-                        } else {
-                            addLog(`Sheet NON COD ditemukan tapi kosong (diabaikan).`, false);
-                        }
-                    }
-                    
-                    addLog("Selesai! File konversi otomatis terunduh.");
-                    
-                    setTimeout(() => {
-                        removeFile();
-                        processBtn.textContent = "Proses File";
-                        processBtn.disabled = false;
-                        processBtn.classList.remove('opacity-75', 'cursor-not-allowed');
-                    }, 2000);
-
-                } catch (err) {
-                    addLog("Terjadi Kesalahan: " + err.message, false);
-                    processBtn.textContent = "Coba Lagi";
-                    processBtn.disabled = false;
-                    processBtn.classList.remove('opacity-75', 'cursor-not-allowed');
-                }
-            };
-            reader.readAsArrayBuffer(currentFile);
-        });
-
-        function setAutoWidth(ws, data) {
-            if (!data || data.length === 0) return;
-            const keys = Object.keys(data[0]);
-            const colWidths = keys.map(key => {
-                let maxLen = key.toString().length;
-                data.slice(0, 50).forEach(row => {
-                    let val = row[key];
-                    if (val === null || val === undefined) val = "";
-                    let currentLen = val.toString().length;
-                    if (currentLen > maxLen) maxLen = currentLen;
-                });
-                return { wch: Math.min(maxLen + 2, 60) }; 
-            });
-            ws['!cols'] = colWidths;
-        }
-
-        function saveExcel(data, fileName) {
-            const newWs = XLSX.utils.json_to_sheet(data);
-            setAutoWidth(newWs, data); 
-            const newWb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(newWb, newWs, "Sheet1");
-            XLSX.writeFile(newWb, fileName);
-        }
-
-        function addLog(msg, success = true) {
-            statusContainer.classList.remove('hidden');
-            const li = document.createElement('li');
-            li.className = success ? "text-green-600 font-medium" : "text-red-500 font-bold";
-            li.innerHTML = `<span>${success ? '✅' : '❌'}</span> ${msg}`;
-            statusList.appendChild(li);
-        }
-
-        function findKey(row, possibleNames) {
-            const keys = Object.keys(row);
-            for (let name of possibleNames) {
-                const found = keys.find(k => k.trim().toLowerCase() === name.toLowerCase());
-                if (found) return row[found];
-            }
-            return null;
-        }
-
-        function cleanCurrency(val) {
-            if (val === undefined || val === null || val === "") return 0;
-            const cleanStr = String(val).replace(/Rp/gi, '').replace(/\./g, '').replace(/,/g, '').trim();
-            const num = parseInt(cleanStr, 10);
-            return isNaN(num) ? 0 : num;
-        }
-    </script>
-
-    <!-- Script Lucide Icons (Tunggal & Bersih) -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script>
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
-    </script>
+  <noscript><div class="noscript-message">JavaScript must be enabled to use the SAPX to MILE Converter.</div></noscript>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" defer></script>
+  <script src="/assets/js/workbook-parser.js?v=20260728-1" defer></script>
+  <script src="/assets/js/converters.js?v=20260728-1" defer></script>
+  <script src="/assets/js/validation.js?v=20260728-1" defer></script>
+  <script src="/assets/js/export.js?v=20260728-1" defer></script>
+  <script src="/assets/js/app.js?v=20260728-1" defer></script>
 </body>
 </html>
