@@ -11,6 +11,7 @@ All notable changes to the SAPX to MILE Converter are documented here.
 - Per-sheet COD classification from the amount: positive amounts are COD, while zero or empty amounts are Non-COD. Invalid or negative mixed-sheet amounts and explicit COD rows without amounts are quarantined and reported with their actual Excel row.
 - Delivery-area summaries with kecamatan-to-kelurahan grouping, source filters, and visible inferred, unknown, ambiguous, and conflicting assignments. The Batam hierarchy uses the city's published 12 kecamatan and 64 kelurahan; address inference remains subject to source quality.
 - Real pinned SheetJS workbook roundtrip and browser regression tooling, plus independent comparisons against private source-row audits.
+- Expandable warning details with original Excel rows, source sheet and column, AWB, recipient, source/output values, reasons, and corrective actions. All affected rows are available through pagination and exact `row:223` search; missing-column warnings refer to the header row.
 
 ### Changed
 

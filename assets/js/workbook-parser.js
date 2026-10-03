@@ -108,6 +108,42 @@
     return [formattedRow, rawRow].some((row) => Array.isArray(row) && row.some(hasMeaningfulValue));
   }
 
+  function columnLetter(index) {
+    let letter = '';
+    for (let number = index + 1; number > 0; number = Math.floor((number - 1) / 26)) {
+      letter = String.fromCharCode(65 + ((number - 1) % 26)) + letter;
+    }
+    return letter;
+  }
+
+  function sourceColumnOffset(worksheet) {
+    const firstCell = /^([A-Z]+)\d+/i.exec(String(worksheet['!ref'] || ''));
+    if (!firstCell) return 0;
+    return [...firstCell[1].toUpperCase()].reduce((number, letter) => number * 26 + letter.charCodeAt(0) - 64, 0) - 1;
+  }
+
+  function columnMetadata(headers, index, offset) {
+    if (index === undefined) return null;
+    const letter = columnLetter(index + offset);
+    const label = normalizeText(headers[index]);
+    return { index: index + offset, letter, label, column: `${letter} · ${label}` };
+  }
+
+  function createSourceFields(headers, access, formattedRow, rawRow, offset) {
+    const fields = {};
+    Object.entries(access.indexes).forEach(([field, indexes]) => {
+      const index = indexes.find((candidate) => hasMeaningfulValue(formattedRow[candidate]))
+        ?? indexes.find((candidate) => hasMeaningfulValue(rawRow[candidate])) ?? indexes[0];
+      if (index === undefined) return;
+      fields[field] = {
+        ...columnMetadata(headers, index, offset),
+        originalValue: formattedRow[index] == null ? '' : formattedRow[index],
+        rawValue: rawRow[index] == null ? '' : rawRow[index]
+      };
+    });
+    return fields;
+  }
+
   function identifierText(formatted, raw) {
     const text = normalizeText(formatted);
     // Excel's General format can abbreviate an intact numeric phone/AWB.
@@ -181,6 +217,7 @@
       sourceSheetName: sheet.sourceSheetName,
       headers: sheet.headers,
       headerRow: sheet.headerRow,
+      fieldColumns: sheet.fieldColumns,
       records,
       // Source-level skips are reported once, independently of the two outputs.
       skippedRows: [],
@@ -205,6 +242,11 @@
     const headerIndex = detected ? detected.rowIndex : 0;
     const headers = detected ? detected.headers : (formattedRows[headerIndex] || []);
     const access = detected ? detected.access : createColumnAccess(headers);
+    const columnOffset = sourceColumnOffset(worksheet);
+    const fieldColumns = {};
+    Object.entries(access.indexes).forEach(([field, indexes]) => {
+      fieldColumns[field] = columnMetadata(headers, indexes[0], columnOffset);
+    });
     const rowCount = Math.max(formattedRows.length, rawRows.length);
     const records = [];
     const skippedRows = [];
@@ -222,11 +264,12 @@
       const raw = (field) => getValueFromIndexes(rawRow, access.indexes[field], false);
       const sourceRow = rowIndex + 1;
       const awb = identifierText(text('awb'), raw('awb'));
+      const sourceFields = createSourceFields(headers, access, formattedRow, rawRow, columnOffset);
 
       if (!validAwb(awb)) {
         const repeatedHeader = awb && ALIASES.awb.some((alias) => canonicalHeader(awb) === canonicalHeader(alias));
         skippedRows.push({
-          sourceSheetName: sheetName, sourceRow, awb,
+          sourceSheetName: sheetName, sourceRow, awb, recipientName: text('recipientName'), sourceFields,
           reason: !awb ? 'Missing AWB' : repeatedHeader ? 'Repeated header row' : 'Invalid AWB or summary row',
           code: !awb ? 'missing-awb' : repeatedHeader ? 'repeated-header' : 'invalid-awb'
         });
@@ -240,6 +283,7 @@
         type: fixedType,
         sourceSheetName: sheetName,
         sourceRow,
+        sourceFields,
         awb,
         awbDisplay: text('awb'),
         recipientName: text('recipientName'),
@@ -280,7 +324,7 @@
         classificationIssues.push(entry);
         record.classificationWarnings.push(entry);
         unclassifiedRecords.push(record);
-        skippedRows.push({ ...entry, reason: entry.message });
+        skippedRows.push({ ...entry, recipientName: record.recipientName, sourceFields, reason: entry.message });
         continue;
       }
       record.type = fixedType || amountType;
@@ -308,6 +352,7 @@
       sourceSheetName: sheetName,
       headers: headers.map(normalizeText),
       headerRow: headerIndex + 1,
+      fieldColumns,
       records,
       skippedRows,
       classificationIssues,
@@ -329,6 +374,7 @@
       type,
       headers: [...new Set(sources.flatMap((sheet) => sheet.headers))],
       headerRow: sources.length === 1 ? sources[0].headerRow : null,
+      fieldColumns: sources.length === 1 ? sources[0].fieldColumns : {},
       records: sources.flatMap((sheet) => sheet[type].records),
       // Retain the old aggregate skip metadata for legacy consumers. New UI
       // validation uses each source sheet's skippedRows exactly once.

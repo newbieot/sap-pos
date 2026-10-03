@@ -168,6 +168,8 @@ Validation is transparent and non-destructive. It reports:
 
 Validation leaves the source workbook unchanged. Export content follows the documented cleaning, phone, and fallback rules. Skipped and quarantined rows are reported once at source-sheet level.
 
+Open **View row details** on a warning to inspect every affected shipment's source sheet, original Excel row, AWB, recipient, source column, original value, output value, and corrective action. Details show 25 rows per page with Previous/Next buttons and search. Use `row:223` to find an exact source Excel row, or search by AWB or recipient. Row numbers refer to the uploaded workbook before output sorting. Missing-column warnings use **View header details** and point to the actual header row, without inventing a shipment AWB.
+
 ## Privacy and security
 
 Shipment records can contain names, phone numbers, addresses, AWBs, and COD values. The application processes workbook contents locally in the browser.

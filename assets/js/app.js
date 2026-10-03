@@ -290,7 +290,7 @@
         : 'The workbook can be generated with warnings.';
     overviewText.textContent = validation.status === 'ready'
       ? 'No validation warnings were found in the supported worksheets.'
-      : `${validation.issues.length} validation item${validation.issues.length === 1 ? '' : 's'} reported. Review the details below.`;
+      : `${validation.issues.length} validation item${validation.issues.length === 1 ? '' : 's'} reported. Open row details to see the original Excel rows, source values, and output behavior.`;
     overviewCopy.append(overviewTitle, overviewText);
     elements.validationOverview.append(overviewIcon, overviewCopy);
 
@@ -315,12 +315,109 @@
       const explanation = document.createElement('span');
       explanation.textContent = entry.explanation;
       copy.append(title, explanation);
+      renderIssueDetails(entry, copy, item);
       const count = document.createElement('span');
       count.className = 'issue-item-count';
       count.textContent = String(entry.count);
       item.append(icon, copy, count);
       elements.issueList.appendChild(item);
     });
+  }
+
+  function renderIssueDetails(entry, parent, item) {
+    const entries = entry.details || [];
+    if (!entries.length) return;
+    const details = document.createElement('details');
+    details.className = 'issue-details';
+    const summary = document.createElement('summary');
+    summary.textContent = entry.scope === 'header'
+      ? `View header details (${entries.length})`
+      : `View row details (${entries.length})`;
+    const rowNumbers = [...new Set(entries.map((detail) => detail.sourceRow).filter((row) => Number.isInteger(row)))];
+    const rowText = document.createElement('p');
+    rowText.className = 'issue-source-rows';
+    rowText.textContent = rowNumbers.length
+      ? `Original Excel ${entry.scope === 'header' ? 'header row' : 'rows'}: ${rowNumbers.slice(0, 15).join(', ')}${rowNumbers.length > 15 ? ', …' : ''}.`
+      : 'Workbook-level issue; no source Excel row applies.';
+    const filterLabel = document.createElement('label');
+    filterLabel.className = 'issue-detail-filter';
+    const filterName = document.createElement('span');
+    filterName.textContent = 'Find a source row (row:223), AWB, or recipient';
+    const filter = document.createElement('input');
+    filter.type = 'search';
+    filter.placeholder = 'row:223, AWB, or recipient';
+    filterLabel.append(filterName, filter);
+    const region = document.createElement('div');
+    region.className = 'issue-detail-region';
+    region.setAttribute('role', 'region');
+    region.setAttribute('aria-label', `${entry.title} source details`);
+    region.tabIndex = 0;
+    const table = document.createElement('table');
+    table.className = 'issue-detail-table';
+    const head = document.createElement('thead');
+    const headRow = document.createElement('tr');
+    const columns = [
+      ['Sheet', 'sourceSheetName'], ['Excel row', 'sourceRow'], ['AWB', 'awb'], ['Recipient', 'recipientName'],
+      ['Source column', 'column'], ['Source value', 'originalValue'], ['Output value', 'outputValue'], ['Reason / output behavior', 'explanation']
+    ];
+    columns.forEach(([label]) => {
+      const th = document.createElement('th'); th.scope = 'col'; th.textContent = label; headRow.appendChild(th);
+    });
+    head.appendChild(headRow);
+    const body = document.createElement('tbody');
+    table.append(head, body);
+    region.appendChild(table);
+    const scrollHint = document.createElement('p');
+    scrollHint.className = 'issue-source-rows';
+    scrollHint.textContent = 'Scroll this table horizontally to see source values, output values, and corrective actions.';
+    const pager = document.createElement('div');
+    pager.className = 'issue-detail-pager';
+    const previous = document.createElement('button');
+    previous.type = 'button'; previous.className = 'button button--ghost button--compact'; previous.textContent = 'Previous';
+    const count = document.createElement('span');
+    count.setAttribute('aria-live', 'polite');
+    const next = document.createElement('button');
+    next.type = 'button'; next.className = 'button button--ghost button--compact'; next.textContent = 'Next';
+    pager.append(previous, count, next);
+    let page = 0;
+    const limit = 25;
+    const renderRows = () => {
+      const query = filter.value.trim().toLocaleLowerCase('en-US');
+      const rowQuery = query.match(/^(?:row|baris)\s*[:#]?\s*(\d+)$/i);
+      const matches = entries.filter((detail) => rowQuery
+        ? Number(detail.sourceRow) === Number(rowQuery[1])
+        : !query || [detail.sourceSheetName, detail.sourceRow, detail.awb, detail.recipientName]
+          .some((value) => String(value ?? '').toLocaleLowerCase('en-US').includes(query)));
+      page = Math.min(page, Math.max(0, Math.ceil(matches.length / limit) - 1));
+      const offset = page * limit;
+      body.replaceChildren();
+      matches.slice(offset, offset + limit).forEach((detail) => {
+        const row = document.createElement('tr');
+        row.dataset.sourceRow = String(detail.sourceRow ?? '');
+        columns.forEach(([, key]) => {
+          const cell = document.createElement('td');
+          const value = key === 'explanation' ? [detail.reason, detail.action].filter(Boolean).join(' ') : detail[key];
+          const noShipmentDetail = entry.scope === 'header' || entry.scope === 'workbook'
+            || (entry.scope === 'sheet' && detail.field === 'worksheet');
+          const notApplicable = ((key === 'awb' || key === 'recipientName') && noShipmentDetail)
+            || (key === 'sourceRow' && value == null);
+          cell.textContent = notApplicable ? 'Not applicable' : value == null || String(value).trim() === '' ? '(empty)' : String(value);
+          if (key === 'sourceRow' || key === 'awb') cell.classList.add('cell-code');
+          row.appendChild(cell);
+        });
+        body.appendChild(row);
+      });
+      count.textContent = matches.length ? `${offset + 1}–${Math.min(offset + limit, matches.length)} of ${matches.length}` : 'No matching details';
+      previous.disabled = page === 0;
+      next.disabled = offset + limit >= matches.length;
+    };
+    filter.addEventListener('input', () => { page = 0; renderRows(); });
+    previous.addEventListener('click', () => { page -= 1; renderRows(); });
+    next.addEventListener('click', () => { page += 1; renderRows(); });
+    details.addEventListener('toggle', () => item.classList.toggle('issue-item--expanded', details.open));
+    details.append(summary, rowText, filterLabel, scrollHint, region, pager);
+    parent.appendChild(details);
+    renderRows();
   }
 
   function getPreviewRecords() {

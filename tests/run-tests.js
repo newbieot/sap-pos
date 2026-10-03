@@ -277,4 +277,58 @@ test('area matching respects address boundaries and flags unreliable source dest
   assert.ok(sourceConflict.conflicts.length > 0);
 });
 
+test('validation details preserve source Excel rows, columns, values, and all duplicate rows', () => {
+  const cols = ['No. AWB', 'Penerima', 'Tlp1', 'Alamat Penerima', 'Berat', 'Nilai COD'];
+  const rows = [['Report'], [], cols,
+    ['AWB1', 'Recipient', '123', 'Address', 0, 1000],
+    ['AWB2', 'Recipient', '', 'Address', '', 1000], [],
+    ['AWB1', 'Duplicate', '08123456789', 'Address', 1, 1000]];
+  const result = parser.parseWorkbook(new Uint8Array([1]), fakeXlsx({ SheetNames: ['COD'], Sheets: { COD: { formattedRows: rows, rawRows: rows } } }));
+  const checked = validation.validateWorkbook(result);
+  const shortPhone = checked.issues.find((entry) => entry.id.endsWith('-invalidPhone'));
+  assert.equal(shortPhone.details[0].sourceRow, 4);
+  assert.equal(shortPhone.details[0].column, 'C · Tlp1');
+  assert.equal(shortPhone.details[0].awb, 'AWB1');
+  assert.equal(shortPhone.details[0].originalValue, '123');
+  assert.equal(shortPhone.details[0].outputValue, '0');
+  assert.match(shortPhone.details[0].reason, /3 digits/);
+  const emptyPhone = checked.issues.find((entry) => entry.id.endsWith('-phone'));
+  assert.equal(emptyPhone.details[0].sourceRow, 5);
+  assert.equal(emptyPhone.details[0].originalValue, '');
+  assert.equal(emptyPhone.details[0].outputValue, '0');
+  const duplicate = checked.issues.find((entry) => entry.id.endsWith('-duplicateAwb'));
+  assert.equal(duplicate.count, 2);
+  assert.deepEqual(duplicate.details.map((detail) => detail.sourceRow), [4, 7]);
+  const header = checked.issues.find((entry) => entry.id.endsWith('-headers'));
+  assert.equal(header.scope, 'header');
+  assert.equal(header.details[0].sourceRow, 3);
+  assert.equal(header.details[0].awb, '');
+});
+
+test('validation details include quarantined COD values and every skipped source row', () => {
+  const cols = ['AWB', 'Penerima', 'Telepon', 'Alamat', 'Nilai COD'];
+  const rows = [cols, ['OK1', 'Recipient', '08123456789', 'Address', 0],
+    ['BAD1', 'Recipient', '08123456789', 'Address', 'invalid'],
+    ['', 'No AWB', '08123456789', 'Address', 0]];
+  const result = parser.parseWorkbook(new Uint8Array([1]), fakeXlsx({ SheetNames: ['Vendor'], Sheets: { Vendor: { formattedRows: rows, rawRows: rows } } }));
+  const checked = validation.validateWorkbook(result);
+  const skip = checked.issues.find((entry) => entry.id.endsWith('-skipped'));
+  assert.deepEqual(skip.details.map((detail) => detail.sourceRow), [3, 4]);
+  assert.equal(skip.details[0].column, 'E · Nilai COD');
+  assert.equal(skip.details[0].originalValue, 'invalid');
+  assert.equal(skip.details[0].outputValue, 'Not exported');
+  const invalid = checked.issues.find((entry) => entry.id.includes('-classification-'));
+  assert.equal(invalid.details[0].sourceRow, 3);
+  assert.equal(invalid.details[0].awb, 'BAD1');
+});
+
+test('physical source column letters account for worksheets starting after column A', () => {
+  const cols = ['AWB', 'Penerima', 'Telepon', 'Alamat', 'Nilai COD'];
+  const rows = [cols, ['AWB1', 'Recipient', '0', 'Address', 1000]];
+  const result = parser.parseWorkbook(new Uint8Array([1]), fakeXlsx({ SheetNames: ['COD'], Sheets: { COD: { '!ref': 'B1:F2', formattedRows: rows, rawRows: rows } } }));
+  const shortPhone = validation.validateWorkbook(result).issues.find((entry) => entry.id.endsWith('-invalidPhone'));
+  assert.equal(shortPhone.details[0].column, 'D · Telepon');
+  assert.equal(shortPhone.details[0].sourceRow, 2);
+});
+
 console.log(`\n${passed} regression tests passed.`);

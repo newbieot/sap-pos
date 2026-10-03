@@ -6,10 +6,12 @@ The current implementation was verified with the real pinned SheetJS `0.20.3` ru
 
 ### Results
 
-- Node regression tests: **18 passed, 0 failed**. Coverage includes mixed-sheet detection, accurate Excel rows across blanks, currency notation, invalid-value quarantine, KARDUS recipient/AWB mapping, output sanitization, short phones, scientific phone recovery, and area grouping with unknown locations and source conflicts.
+- Node regression tests: **21 passed, 0 failed**. Coverage includes mixed-sheet detection, accurate Excel rows across blanks, currency notation, invalid-value quarantine, KARDUS recipient/AWB mapping, output sanitization, short phones, scientific phone recovery, area grouping, and exact validation rows/source columns/values for headers, duplicates, and skipped records.
 - Vendor workbook: **10 shipment sheets, 725 records, 198 COD, 527 Non-COD, 17 output files**.
 - Real XLSX export roundtrip: each output's source tab name, row count, schema, omission of `INS`, cleaned text, recipient fields, phones, and AWB references were checked. Independent audit comparisons covered every source row.
 - Actual-workbook browser regression: the pinned SheetJS build exercised upload, sheet counts and filtering, the 346-record KARDUS preview, all 17 exports, unique filenames, mobile page width, and workspace clearing with no page errors.
+- Detailed validation audit: all **26 groups and 363 details** match independent source-row checks with no mismatches. These comprise 354 shipment rows and nine missing sender headers. Header row 2 in karung A and row 1 in B–I are reported correctly. Phone details show the source value and exported text `0`; empty descriptions remain empty and missing sender headers document the `ANGGUN` fallback.
+- Warning-detail browser checks cover 25-row pages, Next, exact `row:14`/`row:223` search, original column `Q · Tlp1`, blank versus numeric zero, header scope, and expanded-card layout at mobile widths. Independent UI review also verified that hostile spreadsheet text stays literal and cannot execute scripts.
 - Legacy workbook `SAP X POS TGL 24-09-2026.xlsx`: **two sheets, five shipment rows** remained readable.
 
 | Source sheet | Records | COD | Non-COD | Outputs |
