@@ -68,7 +68,7 @@
 
   const NON_COD_CONSTANTS = Object.freeze({
     customerCode: 'WSSAP01294A',
-    fallbackSenderName: 'ANGGUN',
+    fallbackSenderName: 'SAP Batam',
     senderPhone: '082169602910',
     senderAddress: 'SAP BATAM',
     originZipCode: '29411',

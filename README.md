@@ -134,7 +134,7 @@ Explicit recipient area columns and labeled address fields take priority. Bounde
 | Field | Value |
 |---|---|
 | Customer code | `WSSAP01294A` |
-| Fallback sender | `ANGGUN` |
+| Fallback sender | `SAP Batam` |
 | Sender phone | `082169602910` |
 | Sender address | `SAP BATAM` |
 | Origin ZIP / zone | `29411` / `29400` |

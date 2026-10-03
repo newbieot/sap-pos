@@ -15,6 +15,7 @@ All notable changes to the SAPX to MILE Converter are documented here.
 
 ### Changed
 
+- Use `SAP Batam` for `origin_data_customer_name` when the source sender name is absent.
 - Removed `INS` from both export schemas.
 - Cleaned output content to letters, numbers, spaces, and `.`, `-`, `,`, `(`, `)`, while preserving required schema headers. Other characters become spaces in descriptions and are removed from identifiers.
 - Exported empty phone values and values with fewer than eight digits as text `0`.

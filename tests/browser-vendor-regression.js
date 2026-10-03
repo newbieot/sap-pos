@@ -52,7 +52,7 @@ async function main() {
     await headerIssue.locator('.issue-details summary').click();
     assert.equal(await headerIssue.locator('tbody td').nth(1).innerText(), '2');
     assert.equal(await headerIssue.locator('tbody td').nth(2).innerText(), 'Not applicable');
-    assert.equal(await headerIssue.locator('tbody td').nth(6).innerText(), 'ANGGUN');
+    assert.equal(await headerIssue.locator('tbody td').nth(6).innerText(), 'SAP Batam');
     await headerIssue.locator('.issue-details summary').click();
     const blankPhone = page.locator('#issueList .issue-item').filter({ hasText: '22 KARDUS · Non-COD records with recipient phone' });
     await blankPhone.locator('.issue-details summary').click();

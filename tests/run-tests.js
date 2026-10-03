@@ -120,7 +120,7 @@ test('preserves Non-COD constants and sorts alphabetically with sequential conno
   assert.deepEqual(output.map((row) => row.connote_code), [1, 2]);
   assert.equal(output[0].customer_code, 'WSSAP01294A');
   assert.equal(output[0].origin_data_customer_name, 'SAP OFFICE');
-  assert.equal(output[1].origin_data_customer_name, 'ANGGUN');
+  assert.equal(output[1].origin_data_customer_name, 'SAP Batam');
   assert.equal(output[0].origin_data_customer_phone, '082169602910');
   assert.equal(output[0].origin_data_customer_address, 'SAP BATAM');
   assert.equal(output[0].service_code, 'PKH');
