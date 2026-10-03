@@ -1,5 +1,63 @@
 # Regression Testing Report
 
+## 2026-10-03 — Vendor workbook support
+
+The current implementation was verified with the real pinned SheetJS `0.20.3` runtime and the supplied private `vendor pos 3 okt 2026.xlsx`, alongside an independent source-row audit. Source workbooks and audit JSON files are not committed.
+
+### Results
+
+- Node regression tests: **18 passed, 0 failed**. Coverage includes mixed-sheet detection, accurate Excel rows across blanks, currency notation, invalid-value quarantine, KARDUS recipient/AWB mapping, output sanitization, short phones, scientific phone recovery, and area grouping with unknown locations and source conflicts.
+- Vendor workbook: **10 shipment sheets, 725 records, 198 COD, 527 Non-COD, 17 output files**.
+- Real XLSX export roundtrip: each output's source tab name, row count, schema, omission of `INS`, cleaned text, recipient fields, phones, and AWB references were checked. Independent audit comparisons covered every source row.
+- Actual-workbook browser regression: the pinned SheetJS build exercised upload, sheet counts and filtering, the 346-record KARDUS preview, all 17 exports, unique filenames, mobile page width, and workspace clearing with no page errors.
+- Legacy workbook `SAP X POS TGL 24-09-2026.xlsx`: **two sheets, five shipment rows** remained readable.
+
+| Source sheet | Records | COD | Non-COD | Outputs |
+|---|---:|---:|---:|---:|
+| karung A | 38 | 12 | 26 | 2 |
+| karung B | 59 | 38 | 21 | 2 |
+| karung C | 37 | 13 | 24 | 2 |
+| karung D | 23 | 12 | 11 | 2 |
+| karung E | 44 | 28 | 16 | 2 |
+| karung F | 64 | 41 | 23 | 2 |
+| karung G | 76 | 54 | 22 | 2 |
+| karung H | 22 | 0 | 22 | 1 |
+| karung I | 16 | 0 | 16 | 1 |
+| KARDUS | 346 | 0 | 346 | 1 |
+| **Total** | **725** | **198** | **527** | **17** |
+
+### Accuracy checks and limitations
+
+KARDUS has 94 source columns. Its AWB is column B (`No. AWB`), while column E (`No. Referensi`) differs in 159 rows. The row audit verified that output `ref_no` uses the AWB. Recipient name, address, and phone come from `Penerima`, `Alamat Penerima`, and `Tlp1`; unrelated sender/contact fields and `Tlp2` are not substituted. For 176 empty descriptions, the source shipment kind supplies 172 `DOKUMEN` and four `PAKET` values. Zero and blank COD amounts correctly produce Non-COD even on the two `CASH` rows.
+
+The audit also exposed scientific display text such as `6.28177E+12` with intact underlying phone digits. The parser preserves the full safe numeric integer before phone cleaning. Empty and fewer-than-eight-digit phones export as text `0`; source leading zeroes remain when available. Digits already lost or rounded in Excel cannot be reconstructed.
+
+Mixed-sheet invalid or negative COD amounts and explicit COD indicators without an amount are quarantined, with their source rows reported. Repeated headers, totals, and invalid AWB rows are also excluded. These synthetic edge cases are separate from the supplied vendor workbook, which had 725 valid AWBs and no skipped rows.
+
+Delivery-area grouping uses the published Batam hierarchy of 12 kecamatan and 64 kelurahan. The supplied workbook has no explicit kecamatan or kelurahan columns. Address-based assignments therefore expose their inferred status, unknown addresses, and source conflicts; these counts are not an independently verified geographic ground truth. Area filtering and hierarchy behavior must retain the displayed unknown and conflict counts.
+
+### Reproduction
+
+```bash
+node tests/run-tests.js
+python tests/static-audit.py
+node tests/vendor-regression.js "<input.xlsx>" "<cached-sheetjs-0.20.3.js>" "<independent-audit.json>"
+```
+
+The independent audit argument is optional. For the vendor-specific browser regression, use the supplied 3 October workbook and configure the local Playwright package:
+
+```powershell
+$env:PLAYWRIGHT_NODE_PATH = 'C:\path\to\playwright'
+$env:CHROME_PATH = 'C:\path\to\chrome.exe'
+node tests/browser-vendor-regression.js "<vendor-input.xlsx>" "<cached-sheetjs-0.20.3.js>"
+```
+
+`CHROME_PATH` is optional when Playwright's Chromium is installed. The browser harness serves the repository locally and supplies the cached official SheetJS build for the pinned CDN request. Deployment/domain checks remain separate from these local tests.
+
+## Historical report — 2026-07-28
+
+The following report records the earlier 2.0.0 redesign. Its fixed sheet names, row-3 header assumption, `Sheet1` exports, `INS` schema, and test-double limitation describe that historical version; the current behavior and real-runtime verification are documented above.
+
 Date: 2026-07-28  
 Target: `redesign/complete-ui-ux`
 

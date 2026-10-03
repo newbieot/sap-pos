@@ -22,8 +22,7 @@
     'ref_no',
     'Jenis_Barang',
     'COD',
-    'statusRetur',
-    'INS'
+    'statusRetur'
   ]);
 
   const NON_COD_COLUMNS = Object.freeze([
@@ -51,8 +50,7 @@
     'harga_barang',
     'ref_no',
     'Jenis_Barang',
-    'statusRetur',
-    'INS'
+    'statusRetur'
   ]);
 
   const COD_CONSTANTS = Object.freeze({
@@ -65,8 +63,7 @@
     accountPgm: '0166648410',
     itemType: 'PAKET',
     codIndicator: 'COD',
-    returnStatus: 0,
-    ins: null
+    returnStatus: 0
   });
 
   const NON_COD_CONSTANTS = Object.freeze({
@@ -88,12 +85,28 @@
     deliveryInstruction: 'Tolong diantar dengan baik',
     itemValue: 0,
     itemType: 'Paket',
-    returnStatus: 'Kembali ke pengirim',
-    ins: null
+    returnStatus: 'Kembali ke pengirim'
   });
 
   function isBlank(value) {
     return value === null || value === undefined || String(value).trim() === '';
+  }
+
+  function sanitizeOutputText(value, options) {
+    if (value === null || value === undefined) return '';
+    const replacement = options && options.identifier ? '' : ' ';
+    return String(value)
+      .normalize('NFC')
+      .replace(/[^\p{L}\p{N} .\-,()]/gu, replacement)
+      .replace(/ +/g, ' ')
+      .trim();
+  }
+
+  function normalizeOutputPhone(value) {
+    const source = value === null || value === undefined ? '' : String(value);
+    const digitCount = (source.match(/[0-9]/g) || []).length;
+    if (digitCount < 8) return '0';
+    return sanitizeOutputText(source, { identifier: true });
   }
 
   function cleanCurrency(value) {
@@ -119,21 +132,21 @@
 
   function sourceWeight(record, fallback) {
     const raw = record ? record.weight : '';
-    return isBlank(raw) ? fallback : raw;
+    return isBlank(raw) ? fallback : typeof raw === 'string' ? sanitizeOutputText(raw) : raw;
   }
 
   function convertCod(records) {
     return records
       .map((record) => {
         const cod = cleanCurrency(record.codAmount);
-        const awb = String(record.awb || '');
+        const awb = sanitizeOutputText(record.awb, { identifier: true });
         return {
-          nama_penerima: record.recipientName || '',
-          telp_penerima: String(record.phone || ''),
-          alamat_penerima: record.address || '',
+          nama_penerima: sanitizeOutputText(record.recipientName),
+          telp_penerima: normalizeOutputPhone(record.phone),
+          alamat_penerima: sanitizeOutputText(record.address),
           zip_code_penerima: COD_CONSTANTS.recipientZipCode,
           zona_penerima: COD_CONSTANTS.recipientZone,
-          koli_description: record.description || '',
+          koli_description: sanitizeOutputText(record.description),
           koli_weight: sourceWeight(record, COD_CONSTANTS.defaultWeight),
           koli_width: COD_CONSTANTS.width,
           koli_height: COD_CONSTANTS.height,
@@ -144,8 +157,7 @@
           ref_no: awb,
           Jenis_Barang: COD_CONSTANTS.itemType,
           COD: COD_CONSTANTS.codIndicator,
-          statusRetur: COD_CONSTANTS.returnStatus,
-          INS: COD_CONSTANTS.ins
+          statusRetur: COD_CONSTANTS.returnStatus
         };
       })
       .sort((a, b) => a.harga_barang - b.harga_barang);
@@ -163,19 +175,19 @@
     return sortedRecords.map((record, index) => ({
       connote_code: index + 1,
       customer_code: NON_COD_CONSTANTS.customerCode,
-      origin_data_customer_name: record.sender || NON_COD_CONSTANTS.fallbackSenderName,
-      origin_data_customer_phone: NON_COD_CONSTANTS.senderPhone,
+      origin_data_customer_name: sanitizeOutputText(record.sender || NON_COD_CONSTANTS.fallbackSenderName),
+      origin_data_customer_phone: normalizeOutputPhone(NON_COD_CONSTANTS.senderPhone),
       origin_data_customer_address: NON_COD_CONSTANTS.senderAddress,
       origin_data_customer_zip_code: NON_COD_CONSTANTS.originZipCode,
       origin_data_zone_code: NON_COD_CONSTANTS.originZoneCode,
-      destination_data_customer_name: record.recipientName || '',
-      destination_data_customer_phone: String(record.phone || ''),
-      destination_data_customer_address: record.address || '',
+      destination_data_customer_name: sanitizeOutputText(record.recipientName),
+      destination_data_customer_phone: normalizeOutputPhone(record.phone),
+      destination_data_customer_address: sanitizeOutputText(record.address),
       destination_data_customer_zip_code: NON_COD_CONSTANTS.destinationZipCode,
       destination_data_zone_code: NON_COD_CONSTANTS.destinationZoneCode,
       service_code: NON_COD_CONSTANTS.serviceCode,
       connote_sub_service_code: NON_COD_CONSTANTS.subServiceCode,
-      koli_data_koli_description: record.description || '',
+      koli_data_koli_description: sanitizeOutputText(record.description),
       koli_data_koli_weight: sourceWeight(record, NON_COD_CONSTANTS.defaultWeight),
       koli_data_koli_width: NON_COD_CONSTANTS.width,
       koli_data_koli_height: NON_COD_CONSTANTS.height,
@@ -183,10 +195,9 @@
       transaction_payment_type_name: NON_COD_CONSTANTS.paymentType,
       instruksi_pengiriman: NON_COD_CONSTANTS.deliveryInstruction,
       harga_barang: NON_COD_CONSTANTS.itemValue,
-      ref_no: String(record.awb || ''),
+      ref_no: sanitizeOutputText(record.awb, { identifier: true }),
       Jenis_Barang: NON_COD_CONSTANTS.itemType,
-      statusRetur: NON_COD_CONSTANTS.returnStatus,
-      INS: NON_COD_CONSTANTS.ins
+      statusRetur: NON_COD_CONSTANTS.returnStatus
     }));
   }
 
@@ -198,11 +209,15 @@
     return `${day}${month}${year}`;
   }
 
-  function createOutputFilename(type, date) {
+  function createOutputFilename(type, date, sourceSheetName) {
     const stamp = formatDateDDMMYYYY(date);
+    const sourceName = isBlank(sourceSheetName)
+      ? 'sapx'
+      : sanitizeOutputText(sourceSheetName)
+        .replace(/[. ]+$/g, '') || 'sheet';
     return type === 'cod'
-      ? `template_cod_sapx_${stamp}.xlsx`
-      : `template_noncod_sapx_${stamp}.xlsx`;
+      ? `template_cod_${sourceName}_${stamp}.xlsx`
+      : `template_noncod_${sourceName}_${stamp}.xlsx`;
   }
 
   return {
@@ -210,6 +225,8 @@
     NON_COD_COLUMNS,
     COD_CONSTANTS,
     NON_COD_CONSTANTS,
+    sanitizeOutputText,
+    normalizeOutputPhone,
     cleanCurrency,
     convertCod,
     convertNonCod,

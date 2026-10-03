@@ -29,7 +29,7 @@
   <meta name="twitter:description" content="Convert SAPX shipment workbooks into validated MILE-ready templates in your browser.">
   <meta name="twitter:image" content="https://sapx.posnew.com/og-cover.png">
   <link rel="preconnect" href="https://cdn.sheetjs.com" crossorigin>
-  <link rel="stylesheet" href="/assets/css/app.css?v=20260728-1">
+  <link rel="stylesheet" href="/assets/css/app.css?v=20261003-1">
   <script type="application/ld+json">
   {"@context":"https://schema.org","@type":"SoftwareApplication","name":"SAPX to MILE Converter","applicationCategory":"BusinessApplication","operatingSystem":"Web","url":"https://sapx.posnew.com/","description":"A browser-based utility for converting SAPX COD and Non-COD workbooks into validated MILE-ready shipment templates.","author":{"@type":"Person","name":"Ikhsan Radiansyah","url":"https://posnew.com/about-me.html"},"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
   </script>
@@ -135,7 +135,7 @@
           <div id="workbookDetails" hidden>
             <div class="inspection-meta">
               <span>Detected sheets</span><strong id="sheetCount">0</strong>
-              <span>Additional sheets</span><strong id="extraSheetCount">0</strong>
+              <span>Ignored sheets</span><strong id="extraSheetCount">0</strong>
             </div>
             <div class="sheet-list">
               <article class="sheet-item" id="codSheetItem">
@@ -145,12 +145,13 @@
               </article>
               <article class="sheet-item" id="nonCodSheetItem">
                 <span class="sheet-icon" aria-hidden="true">N</span>
-                <div><strong>NON COD (SPESIAL HANDLING)</strong><small id="nonCodSheetDetail">Not detected</small></div>
+                <div><strong>Non-COD</strong><small id="nonCodSheetDetail">Not detected</small></div>
                 <span id="nonCodSheetBadge" class="status-badge status-badge--neutral">Missing</span>
               </article>
             </div>
+            <div id="shipmentSheetList" class="sheet-list source-sheet-list" aria-label="Shipment sheets"></div>
             <details id="additionalSheets" class="details-block" hidden>
-              <summary>Additional worksheets</summary>
+              <summary>Ignored worksheets</summary>
               <ul id="additionalSheetList"></ul>
             </details>
           </div>
@@ -161,9 +162,10 @@
             <div><span class="section-index">03</span><h2 id="helpTitle">Workbook Requirements</h2></div>
           </div>
           <div class="help-grid">
-            <div><strong>Supported sheets</strong><span>COD and NON COD (SPESIAL HANDLING)</span></div>
-            <div><strong>Header row</strong><span>Row 3, matching the current SAPX export</span></div>
-            <div><strong>Required record key</strong><span>No. AWB, No.AWB, or AWB</span></div>
+            <div><strong>Supported sheets</strong><span>SAPX, vendor sheets, and KARDUS</span></div>
+            <div><strong>Header row</strong><span>Detected automatically from shipment columns</span></div>
+            <div><strong>Required record key</strong><span>No. AWB, No.AWB, AWB, or ref_no</span></div>
+            <div><strong>Separate outputs</strong><span>COD and Non-COD per sheet, without INS</span></div>
             <div><strong>Privacy</strong><span>Processed only in this browser</span></div>
           </div>
         </section>
@@ -185,7 +187,7 @@
             <div class="metric"><span>Worksheets</span><strong id="metricSheets">0</strong><small>supported detected</small></div>
             <div class="metric"><span>COD records</span><strong id="metricCod">0</strong><small>valid AWB rows</small></div>
             <div class="metric"><span>Non-COD records</span><strong id="metricNonCod">0</strong><small>valid AWB rows</small></div>
-            <div class="metric"><span>Skipped</span><strong id="metricSkipped">0</strong><small>missing AWB</small></div>
+            <div class="metric"><span>Skipped</span><strong id="metricSkipped">0</strong><small>excluded source rows</small></div>
             <div class="metric"><span>Warnings</span><strong id="metricWarnings">0</strong><small>review recommended</small></div>
             <div class="metric"><span>Generated</span><strong id="metricGenerated">0</strong><small>output files</small></div>
           </div>
@@ -195,7 +197,7 @@
           <div class="panel-heading-row">
             <div class="panel-heading panel-heading--compact">
               <div><span class="section-index">05</span><h2 id="validationTitle">Validation</h2></div>
-              <p>Warnings do not alter operational values. Rows without AWB remain skipped.</p>
+              <p>Review source data warnings and excluded rows before generating output.</p>
             </div>
             <span id="validationBadge" class="status-badge status-badge--neutral">Waiting</span>
           </div>
@@ -216,6 +218,10 @@
               <div><h2 id="previewTitle">Record Preview</h2><p>Preview uses parsed source records and does not change the generated schema.</p></div>
             </div>
             <div class="preview-controls">
+              <label class="sheet-filter" for="previewSheetSelect">
+                <span class="sr-only">Filter by source sheet</span>
+                <select id="previewSheetSelect" disabled><option value="">All sheets</option></select>
+              </label>
               <label class="search-field" for="previewSearch">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
                 <span class="sr-only">Search records</span>
@@ -251,7 +257,7 @@
           <div class="panel-heading-row">
             <div class="panel-heading panel-heading--compact">
               <div><span class="section-index">07</span><h2 id="resultsTitle">Generated Files</h2></div>
-              <p>Generated workbooks remain available for repeat downloads until the workspace is cleared.</p>
+              <p>Separate COD and Non-COD files use the source sheet name. Files remain available for repeat downloads.</p>
             </div>
             <span id="resultsBadge" class="status-badge status-badge--neutral">Not generated</span>
           </div>
@@ -260,6 +266,22 @@
             <p>Generate MILE workbooks after reviewing the detected records.</p>
           </div>
           <div id="generatedFiles" class="generated-files" hidden></div>
+        </section>
+
+        <section id="deliverySummaryPanel" class="panel-card" aria-labelledby="deliverySummaryTitle">
+          <div class="panel-heading-row">
+            <div class="panel-heading panel-heading--compact">
+              <div><h2 id="deliverySummaryTitle">Antaran per Kecamatan / Kelurahan</h2></div>
+              <p>Ranked by shipment count. Select a source sheet above to filter the areas.</p>
+            </div>
+          </div>
+          <div id="deliverySummaryEmpty" class="empty-state empty-state--compact"><p>Area totals will appear after workbook inspection.</p></div>
+          <div id="deliverySummaryContent" hidden>
+            <p id="deliverySummaryText" class="delivery-summary-text"></p>
+            <p id="deliverySummaryCaveat" class="delivery-summary-caveat"></p>
+            <div id="deliveryDistrictList" class="delivery-district-list"></div>
+            <details class="details-block"><summary>Area data sources</summary><ul id="deliverySourceList"></ul></details>
+          </div>
         </section>
 
         <section class="panel-card log-card" aria-labelledby="logTitle">
@@ -303,10 +325,11 @@
 
   <noscript><div class="noscript-message">JavaScript must be enabled to use the SAPX to MILE Converter.</div></noscript>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" defer></script>
-  <script src="/assets/js/workbook-parser.js?v=20260728-1" defer></script>
-  <script src="/assets/js/converters.js?v=20260728-1" defer></script>
-  <script src="/assets/js/validation.js?v=20260728-1" defer></script>
-  <script src="/assets/js/export.js?v=20260728-1" defer></script>
-  <script src="/assets/js/app.js?v=20260728-1" defer></script>
+  <script src="/assets/js/workbook-parser.js?v=20261003-1" defer></script>
+  <script src="/assets/js/delivery-summary.js?v=20261003-1" defer></script>
+  <script src="/assets/js/converters.js?v=20261003-1" defer></script>
+  <script src="/assets/js/validation.js?v=20261003-1" defer></script>
+  <script src="/assets/js/export.js?v=20261003-1" defer></script>
+  <script src="/assets/js/app.js?v=20261003-1" defer></script>
 </body>
 </html>

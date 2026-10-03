@@ -6,7 +6,8 @@ required = [
     'index.html', '404.html', 'favicon.svg', 'site.webmanifest', 'robots.txt',
     'sitemap.xml', '_headers', 'README.md', 'CHANGELOG.md',
     'assets/css/app.css', 'assets/js/app.js', 'assets/js/workbook-parser.js',
-    'assets/js/converters.js', 'assets/js/validation.js', 'assets/js/export.js'
+    'assets/js/converters.js', 'assets/js/validation.js', 'assets/js/export.js',
+    'assets/js/delivery-summary.js'
 ]
 missing = [path for path in required if not (ROOT / path).exists()]
 if missing:

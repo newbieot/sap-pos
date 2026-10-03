@@ -1,9 +1,26 @@
 (function (root, factory) {
-  const api = factory();
+  const converters = typeof module === 'object' && module.exports
+    ? require('./converters.js')
+    : root.SAPXConverters;
+  const api = factory(converters);
   if (typeof module === 'object' && module.exports) module.exports = api;
   root.SAPXExport = api;
-})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (converters) {
   'use strict';
+
+  const PHONE_COLUMNS = new Set([
+    'telp_penerima',
+    'origin_data_customer_phone',
+    'destination_data_customer_phone'
+  ]);
+
+  function sanitizeExportValue(column, value, isCod) {
+    if (PHONE_COLUMNS.has(column)) return converters.normalizeOutputPhone(value);
+    if (value === null || value === undefined) return '';
+    if (typeof value !== 'string') return value;
+    const identifier = column === 'ref_no' || (isCod && column === 'instruksi_pengiriman');
+    return converters.sanitizeOutputText(value, { identifier });
+  }
 
   function calculateColumnWidths(data, columns) {
     return columns.map((key) => {
@@ -32,27 +49,52 @@
   }
 
   function createWorkbookFile(options) {
-    const { xlsx, data, columns, filename, type, textColumns = [] } = options || {};
+    const { xlsx, data, columns, filename, type, sourceSheetName, sheetName, textColumns = [] } = options || {};
     if (!xlsx || !xlsx.utils || typeof xlsx.write !== 'function') {
       throw new Error('SheetJS is unavailable. Refresh the page and try again.');
     }
     if (!Array.isArray(data) || data.length === 0) {
       throw new Error('There are no valid records to export.');
     }
+    if (!Array.isArray(columns) || columns.length === 0) {
+      throw new Error('The export column format is unavailable.');
+    }
 
-    const worksheet = xlsx.utils.json_to_sheet(data, { header: columns });
-    worksheet['!cols'] = calculateColumnWidths(data, columns);
+    const exportColumns = columns.filter((column) => String(column).trim().toUpperCase() !== 'INS');
+    if (exportColumns.length === 0) {
+      throw new Error('The export column format is unavailable.');
+    }
+    // SheetJS appends object keys outside its header list, so project rows first.
+    const isCod = type === 'cod' || exportColumns.includes('COD');
+    const exportData = data.map((row) => Object.fromEntries(
+      exportColumns.map((column) => [column, sanitizeExportValue(column, row[column], isCod)])
+    ));
+
+    const worksheet = xlsx.utils.json_to_sheet(exportData, { header: exportColumns });
+    worksheet['!cols'] = calculateColumnWidths(exportData, exportColumns);
     if (textColumns.length) enforceTextColumns(worksheet, textColumns, data.length);
 
     const workbook = xlsx.utils.book_new();
-    xlsx.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+    const outputSheetName = converters.sanitizeOutputText(sheetName || sourceSheetName || 'Sheet1')
+      .slice(0, 31)
+      .trim() || 'Sheet1';
+    xlsx.utils.book_append_sheet(workbook, worksheet, outputSheetName);
     const bytes = xlsx.write(workbook, { bookType: 'xlsx', type: 'array', compression: true });
     const blob = new Blob([bytes], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     });
     const url = URL.createObjectURL(blob);
 
-    return { type, filename, records: data.length, blob, url, workbook };
+    return {
+      type,
+      filename,
+      sourceSheetName: sourceSheetName == null ? '' : String(sourceSheetName),
+      sheetName: outputSheetName,
+      records: data.length,
+      blob,
+      url,
+      workbook
+    };
   }
 
   function downloadFile(file) {

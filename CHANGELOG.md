@@ -2,6 +2,36 @@
 
 All notable changes to the SAPX to MILE Converter are documented here.
 
+## Unreleased — 2026-10-03
+
+### Added
+
+- Shipment-sheet detection from recognized headers within the first 100 rows, including the ten-sheet vendor format with `karung A` through `karung I` and the 94-column `KARDUS` report.
+- Source-sheet inspection, preview filtering, and separate COD/Non-COD outputs for each sheet with eligible records. Filenames and worksheet tabs use the source name; cleaned filename collisions receive a suffix.
+- Per-sheet COD classification from the amount: positive amounts are COD, while zero or empty amounts are Non-COD. Invalid or negative mixed-sheet amounts and explicit COD rows without amounts are quarantined and reported with their actual Excel row.
+- Delivery-area summaries with kecamatan-to-kelurahan grouping, source filters, and visible inferred, unknown, ambiguous, and conflicting assignments. The Batam hierarchy uses the city's published 12 kecamatan and 64 kelurahan; address inference remains subject to source quality.
+- Real pinned SheetJS workbook roundtrip and browser regression tooling, plus independent comparisons against private source-row audits.
+
+### Changed
+
+- Removed `INS` from both export schemas.
+- Cleaned output content to letters, numbers, spaces, and `.`, `-`, `,`, `(`, `)`, while preserving required schema headers. Other characters become spaces in descriptions and are removed from identifiers.
+- Exported empty phone values and values with fewer than eight digits as text `0`.
+- Preserved source sheet names, actual row numbers across blanks, and per-sheet sorting. Legacy named COD and Non-COD sheets remain supported.
+
+### Fixed
+
+- KARDUS output `ref_no` now uses `No. AWB`, never the unrelated `No. Referensi`, sender address, or contact fields. Blank descriptions use the source shipment-kind field when available.
+- Mixed-sheet currency notation uses the same parsed amount for classification and conversion, including values such as `Rp 1.500,00`.
+- Expanded scientific-notation phones and AWBs from safe underlying numeric cells without removing existing formatted leading zeroes.
+- Excluded repeated headers, summary rows, invalid AWBs, and ambiguous COD amounts instead of interpreting them as shipments.
+
+### Verified
+
+- The supplied vendor workbook contains 725 shipments across ten sheets: 198 COD and 527 Non-COD, producing 17 files. All 346 KARDUS records are Non-COD.
+- The older 24 September workbook remains readable: two sheets and five shipment rows.
+- Private source workbooks and independent audit files remain outside version control. See `TESTING.md` for current and historical test evidence.
+
 ## 2.0.0 — 2026-07-28
 
 ### Added

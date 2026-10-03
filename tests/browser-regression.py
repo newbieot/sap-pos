@@ -110,6 +110,7 @@ def build_inline_app():
     scripts=[
       SHEETJS_STUB,
       (ROOT/'assets/js/workbook-parser.js').read_text(encoding='utf-8'),
+      (ROOT/'assets/js/delivery-summary.js').read_text(encoding='utf-8'),
       (ROOT/'assets/js/converters.js').read_text(encoding='utf-8'),
       (ROOT/'assets/js/validation.js').read_text(encoding='utf-8'),
       (ROOT/'assets/js/export.js').read_text(encoding='utf-8'),

@@ -33,7 +33,7 @@
   function validPhone(value) {
     if (blank(value)) return false;
     const digits = String(value).replace(/[^0-9]/g, '');
-    return digits.length >= 7 && digits.length <= 16;
+    return digits.length >= 8 && digits.length <= 16;
   }
 
   function issue(id, status, title, explanation, count, sheetType) {
@@ -42,7 +42,7 @@
 
   function validateSheet(sheet) {
     if (!sheet) return [];
-    const label = sheet.type === 'cod' ? 'COD' : 'Non-COD';
+    const label = `${sheet.sourceSheetName ? `${sheet.sourceSheetName} · ` : ''}${sheet.type === 'cod' ? 'COD' : 'Non-COD'}`;
     const issues = [];
 
     if (sheet.isEmpty) {
@@ -55,7 +55,7 @@
     if (!sheet.hasAwbHeader) {
       issues.push(issue(
         `${sheet.type}-awb-header`, 'invalid', `${label} AWB column is missing`,
-        'Use one of the supported headers: No. AWB, No.AWB, or AWB.', 1, sheet.type
+        'Use one of the supported headers: No. AWB, No.AWB, AWB, or ref_no.', 1, sheet.type
       ));
     }
 
@@ -124,8 +124,8 @@
 
     const fieldIssues = [
       ['recipientName', 'warning', 'recipient name', 'The output keeps the field empty; verify the recipient before upload.'],
-      ['phone', 'warning', 'recipient phone', 'The output keeps the phone field empty; no number is invented.'],
-      ['invalidPhone', 'warning', 'unusual phone value', 'Phone values remain strings, but these values have an unusual digit length.'],
+      ['phone', 'warning', 'recipient phone', 'Empty recipient phones are exported as text 0.'],
+      ['invalidPhone', 'warning', 'unusual phone value', 'Recipient phones shorter than 8 digits are exported as text 0. Longer values remain text; verify values over 16 digits.'],
       ['address', 'warning', 'recipient address', 'The output keeps the field empty; verify the destination before upload.'],
       ['description', 'warning', 'item description', 'The output keeps the field empty; verify the shipment content before upload.'],
       ['weight', 'warning', 'weight', 'The documented default weight of 1 is used when this field is empty.'],
@@ -159,11 +159,34 @@
     if (parsed.supportedSheetCount === 0) {
       issues.push(issue(
         'no-supported-sheet', 'invalid', 'No supported worksheet found',
-        'We could not find a worksheet named COD or NON COD (SPESIAL HANDLING).', 1, null
+        'No worksheet contains recognized AWB and recipient shipment headers.', 1, null
       ));
     }
 
-    issues.push(...validateSheet(parsed.cod), ...validateSheet(parsed.nonCod));
+    if (Array.isArray(parsed.sheets)) {
+      parsed.sheets.forEach((source, sourceIndex) => {
+        for (const sheet of [source.cod, source.nonCod]) {
+          issues.push(...validateSheet(sheet).map((entry) => ({
+            ...entry, id: `sheet-${sourceIndex}-${entry.id}`, sourceSheetName: source.sourceSheetName
+          })));
+        }
+        if (source.skippedRows.length) {
+          const reasons = [...new Set(source.skippedRows.map((row) => row.reason))].join('; ');
+          const rows = source.skippedRows.slice(0, 12).map((row) => row.sourceRow).join(', ');
+          issues.push(issue(`sheet-${sourceIndex}-skipped`, 'skipped',
+            `${source.sourceSheetName}: ${source.skippedRows.length} source rows excluded`,
+            `Excel rows ${rows}${source.skippedRows.length > 12 ? ', …' : ''}. ${reasons}.`, source.skippedRows.length, null));
+        }
+        const classificationIssues = source.classificationIssues || [];
+        classificationIssues.forEach((entry, index) => {
+          issues.push(issue(`sheet-${sourceIndex}-classification-${index}`, entry.status || 'warning',
+            `${source.sourceSheetName}: check COD classification at row ${entry.sourceRow}`,
+            entry.message, 1, null));
+        });
+      });
+    } else {
+      issues.push(...validateSheet(parsed.cod), ...validateSheet(parsed.nonCod));
+    }
 
     const invalidCount = issues.filter((entry) => entry.status === 'invalid').length;
     const warningCount = issues

@@ -10,15 +10,25 @@
     nonCod: 'NON COD (SPESIAL HANDLING)'
   });
 
+  // Match complete column names: sender/contact/reference columns in the wide
+  // KARDUS report are not interchangeable with recipient fields or the AWB.
   const ALIASES = Object.freeze({
-    awb: ['No. AWB', 'No.AWB', 'AWB'],
-    recipientName: ['Penerima'],
-    recipientPhone: ['Tlp1', 'Telepon'],
-    recipientAddress: ['Alamat Penerima', 'Alamat'],
-    description: ['Keterangan Barang', 'Isi'],
-    weight: ['Berat'],
-    codAmount: ['Nilai COD', 'COD'],
-    sender: ['Pengirim']
+    awb: ['No. AWB', 'No.AWB', 'AWB', 'Nomor AWB', 'AWB Number', 'awb_no', 'ref_no'],
+    recipientName: ['Penerima', 'Nama Penerima', 'nama_penerima', 'destination_data_customer_name'],
+    recipientPhone: ['Tlp1', 'telp_penerima', 'Telepon Penerima', 'destination_data_customer_phone', 'Telepon'],
+    recipientAddress: ['Alamat Penerima', 'alamat_penerima', 'destination_data_customer_address', 'Alamat'],
+    description: ['Keterangan Barang', 'Isi', 'koli_description', 'koli_data_koli_description', 'Deskripsi Barang'],
+    weight: ['Berat', 'Berat (KG)', 'koli_weight', 'koli_data_koli_weight', 'Weight'],
+    codAmount: ['Nilai COD', 'Nominal COD', 'COD Amount', 'harga_barang', 'COD'],
+    sender: ['Pengirim', 'Nama Pengirim', 'origin_data_customer_name']
+  });
+  const COD_INDICATOR_ALIASES = ['Status COD', 'Jenis COD', 'Is COD', 'COD Flag', 'COD'];
+  const ITEM_TYPE_ALIASES = ['Jenis Kiriman', 'Jenis Barang'];
+  const LOCATION_ALIASES = Object.freeze({
+    destinationLabel: ['Tujuan'],
+    destinationCity: ['Kota/Kab Tujuan', 'Kota / Kab Tujuan', 'Kota Tujuan'],
+    district: ['Kecamatan Penerima', 'Kecamatan Tujuan', 'destination_data_district', 'Kecamatan'],
+    kelurahan: ['Kelurahan Penerima', 'Kelurahan Tujuan', 'Kelurahan/Desa', 'Kelurahan', 'Desa']
   });
 
   function normalizeHeader(value) {
@@ -32,6 +42,10 @@
   function normalizeText(value) {
     if (value == null) return '';
     return String(value).replace(/\u00a0/g, ' ').trim();
+  }
+
+  function canonicalHeader(value) {
+    return normalizeHeader(value).replace(/[._-]+/g, ' ').replace(/\s+/g, ' ').trim();
   }
 
   function hasMeaningfulValue(value) {
@@ -51,12 +65,17 @@
   }
 
   function findColumnIndexes(headerMap, aliases) {
-    const indexes = [];
-    aliases.forEach((alias) => {
-      const found = headerMap.get(normalizeHeader(alias));
-      if (found) indexes.push(...found);
-    });
-    return [...new Set(indexes)];
+    // The first recognized alias wins, so a blank recipient column never falls
+    // through to a generic phone/address column elsewhere in the report.
+    for (const alias of aliases) {
+      const key = canonicalHeader(alias);
+      const indexes = [];
+      headerMap.forEach((found, header) => {
+        if (canonicalHeader(header) === key) indexes.push(...found);
+      });
+      if (indexes.length) return [...new Set(indexes)];
+    }
+    return [];
   }
 
   function getValueFromIndexes(row, indexes, formatted) {
@@ -76,6 +95,12 @@
     Object.entries(ALIASES).forEach(([key, aliases]) => {
       indexes[key] = findColumnIndexes(headerMap, aliases);
     });
+    indexes.codIndicator = findColumnIndexes(headerMap, COD_INDICATOR_ALIASES)
+      .filter((index) => !indexes.codAmount.includes(index));
+    indexes.itemType = findColumnIndexes(headerMap, ITEM_TYPE_ALIASES);
+    Object.entries(LOCATION_ALIASES).forEach(([field, aliases]) => {
+      indexes[field] = findColumnIndexes(headerMap, aliases);
+    });
     return { headerMap, indexes };
   }
 
@@ -83,76 +108,237 @@
     return [formattedRow, rawRow].some((row) => Array.isArray(row) && row.some(hasMeaningfulValue));
   }
 
-  function parseSheet(xlsx, worksheet, type) {
+  function identifierText(formatted, raw) {
+    const text = normalizeText(formatted);
+    // Excel's General format can abbreviate an intact numeric phone/AWB.
+    // Expand only safe integer cells; ordinary text and padded formats retain
+    // their exact display, including leading zeros already present in Excel.
+    if (/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)[eE][+-]?\d+$/.test(text)
+      && typeof raw === 'number' && Number.isSafeInteger(raw) && raw >= 0) {
+      return String(raw);
+    }
+    return text;
+  }
+
+  function detectHeader(rows, allowIncomplete) {
+    let best = null;
+    rows.slice(0, 100).forEach((row, rowIndex) => {
+      if (!Array.isArray(row)) return;
+      const access = createColumnAccess(row);
+      const recognized = Object.keys(ALIASES).filter((field) => access.indexes[field].length);
+      const recipientFields = ['recipientName', 'recipientPhone', 'recipientAddress']
+        .filter((field) => access.indexes[field].length).length;
+      const hasAwb = access.indexes.awb.length > 0;
+      if (!allowIncomplete && (!hasAwb || recipientFields === 0 || recognized.length < 3)) return;
+      const score = recognized.length + (hasAwb ? 10 : 0) + recipientFields;
+      if (score > 0 && (!best || score > best.score)) {
+        best = { rowIndex, headers: row, access, score };
+      }
+    });
+    return best;
+  }
+
+  function parseCodAmount(value) {
+    if (!hasMeaningfulValue(value)) return { valid: true, value: 0, wasEmpty: true };
+    if (typeof value === 'number') {
+      return { valid: Number.isFinite(value), value, wasEmpty: false };
+    }
+    let text = normalizeText(value).replace(/^rp\.?\s*/i, '').replace(/\s+/g, '');
+    // Accept Indonesian and international currency notation without treating
+    // arbitrary non-empty text or a negative amount as a zero-value shipment.
+    if (/^[+-]?\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?$/.test(text)) {
+      text = text.replace(/\./g, '').replace(',', '.');
+    } else if (/^[+-]?\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?$/.test(text)) {
+      text = text.replace(/,/g, '');
+    } else if (/^[+-]?\d+[.,]\d{1,2}$/.test(text)) {
+      text = text.replace(',', '.');
+    } else if (!/^[+-]?\d+$/.test(text)) {
+      return { valid: false, value: NaN, wasEmpty: false };
+    }
+    const parsed = Number(text);
+    return { valid: Number.isFinite(parsed), value: parsed, wasEmpty: false };
+  }
+
+  function explicitCodType(value) {
+    const text = canonicalHeader(value);
+    if (['cod', 'yes', 'true', 'ya', '1'].includes(text)) return 'cod';
+    if (['non cod', 'noncod', 'no cod', 'nocod', 'no', 'false', 'tidak', '0'].includes(text)) return 'nonCod';
+    return null;
+  }
+
+  function validAwb(value) {
+    if (!value || ALIASES.awb.some((alias) => canonicalHeader(value) === canonicalHeader(alias))) return false;
+    if (/^(?:grand\s*total|sub\s*total|total|jumlah|catatan|notes?|keterangan)$/i.test(value)) return false;
+    return /^[a-z0-9][a-z0-9._\/-]*$/i.test(value);
+  }
+
+  function createSubset(sheet, type) {
+    const records = sheet.records.filter((record) => record.type === type);
+    if (!records.length && sheet.type !== type) return null;
+    return {
+      type,
+      name: sheet.name,
+      sourceSheetName: sheet.sourceSheetName,
+      headers: sheet.headers,
+      headerRow: sheet.headerRow,
+      records,
+      // Source-level skips are reported once, independently of the two outputs.
+      skippedRows: [],
+      sourceRowCount: records.length,
+      missingHeaders: sheet.missingHeaders,
+      hasAwbHeader: sheet.hasAwbHeader,
+      isEmpty: sheet.isEmpty,
+      classificationIssues: sheet.classificationIssues.filter((entry) => records.some((record) => record.sourceRow === entry.sourceRow))
+    };
+  }
+
+  function parseSheet(xlsx, worksheet, type, sourceSheetName) {
     const formattedRows = xlsx.utils.sheet_to_json(worksheet, {
-      header: 1,
-      range: 2,
-      defval: '',
-      raw: false,
-      blankrows: false
+      header: 1, range: 0, defval: '', raw: false, blankrows: true
     });
     const rawRows = xlsx.utils.sheet_to_json(worksheet, {
-      header: 1,
-      range: 2,
-      defval: '',
-      raw: true,
-      blankrows: false
+      header: 1, range: 0, defval: '', raw: true, blankrows: true
     });
-
-    const headers = Array.isArray(formattedRows[0]) ? formattedRows[0] : [];
-    const access = createColumnAccess(headers);
+    const fixedType = type === 'cod' || type === 'nonCod' ? type : null;
+    const detected = detectHeader(formattedRows, Boolean(fixedType));
+    if (!detected && !fixedType) return null;
+    const headerIndex = detected ? detected.rowIndex : 0;
+    const headers = detected ? detected.headers : (formattedRows[headerIndex] || []);
+    const access = detected ? detected.access : createColumnAccess(headers);
     const rowCount = Math.max(formattedRows.length, rawRows.length);
     const records = [];
     const skippedRows = [];
+    const classificationIssues = [];
+    const unclassifiedRecords = [];
     let nonEmptySourceRows = 0;
+    const sheetName = sourceSheetName || (fixedType ? SUPPORTED_SHEETS[fixedType] : '');
 
-    for (let rowIndex = 1; rowIndex < rowCount; rowIndex += 1) {
+    for (let rowIndex = headerIndex + 1; rowIndex < rowCount; rowIndex += 1) {
       const formattedRow = formattedRows[rowIndex] || [];
       const rawRow = rawRows[rowIndex] || [];
       if (!rowHasData(formattedRow, rawRow)) continue;
       nonEmptySourceRows += 1;
-
       const text = (field) => getValueFromIndexes(formattedRow, access.indexes[field], true);
       const raw = (field) => getValueFromIndexes(rawRow, access.indexes[field], false);
-      const awb = text('awb');
-      const sourceRow = rowIndex + 3;
+      const sourceRow = rowIndex + 1;
+      const awb = identifierText(text('awb'), raw('awb'));
 
-      if (!awb) {
-        skippedRows.push({ sourceRow, reason: 'Missing AWB' });
+      if (!validAwb(awb)) {
+        const repeatedHeader = awb && ALIASES.awb.some((alias) => canonicalHeader(awb) === canonicalHeader(alias));
+        skippedRows.push({
+          sourceSheetName: sheetName, sourceRow, awb,
+          reason: !awb ? 'Missing AWB' : repeatedHeader ? 'Repeated header row' : 'Invalid AWB or summary row',
+          code: !awb ? 'missing-awb' : repeatedHeader ? 'repeated-header' : 'invalid-awb'
+        });
         continue;
       }
 
-      records.push({
-        type,
+      const primaryDescription = text('description');
+      const description = primaryDescription || text('itemType');
+      const descriptionIndexes = primaryDescription ? access.indexes.description : access.indexes.itemType;
+      const record = {
+        type: fixedType,
+        sourceSheetName: sheetName,
         sourceRow,
         awb,
+        awbDisplay: text('awb'),
         recipientName: text('recipientName'),
-        phone: text('recipientPhone'),
+        phone: identifierText(text('recipientPhone'), raw('recipientPhone')),
+        phoneDisplay: text('recipientPhone'),
         phoneRawType: typeof raw('recipientPhone'),
         address: text('recipientAddress'),
-        description: text('description'),
+        description,
+        descriptionSource: description ? normalizeText(headers[descriptionIndexes[0]]) : '',
+        descriptionFallbackUsed: Boolean(!primaryDescription && description),
         weight: raw('weight'),
         weightDisplay: text('weight'),
         codAmount: raw('codAmount'),
+        codAmountRaw: raw('codAmount'),
         codAmountDisplay: text('codAmount'),
-        sender: text('sender')
-      });
+        codIndicator: text('codIndicator'),
+        sender: text('sender'),
+        destinationLabel: text('destinationLabel'),
+        destinationCity: text('destinationCity'),
+        district: text('district'),
+        kelurahan: text('kelurahan'),
+        classificationWarnings: []
+      };
+      const amount = parseCodAmount(record.codAmount);
+      const amountType = amount.valid && amount.value >= 0 ? (amount.value > 0 ? 'cod' : 'nonCod') : null;
+      const indicatorType = explicitCodType(record.codIndicator);
+      const missingCodAmount = !fixedType && indicatorType === 'cod'
+        && (amount.wasEmpty || access.indexes.codAmount.length === 0);
+
+      if (!fixedType && (!amountType || missingCodAmount)) {
+        const entry = {
+          code: missingCodAmount ? 'missing-cod-amount' : 'invalid-cod-amount',
+          status: 'invalid', sourceSheetName: sheetName, sourceRow, awb,
+          message: missingCodAmount
+            ? 'The row is marked COD but its amount is missing; the row cannot be classified safely.'
+            : 'COD amount is invalid or negative; the row cannot be classified safely.'
+        };
+        classificationIssues.push(entry);
+        record.classificationWarnings.push(entry);
+        unclassifiedRecords.push(record);
+        skippedRows.push({ ...entry, reason: entry.message });
+        continue;
+      }
+      record.type = fixedType || amountType;
+      // Mixed reports use the amount that was classified above, including
+      // decimal currency notation. Keep raw/display values for source review.
+      if (!fixedType) record.codAmount = amount.value;
+      if ((indicatorType && indicatorType !== amountType) || (fixedType && amountType && fixedType !== amountType && !amount.wasEmpty)) {
+        const entry = {
+          code: 'cod-type-conflict', status: 'warning', sourceSheetName: sheetName, sourceRow, awb,
+          message: fixedType
+            ? 'COD amount disagrees with the legacy worksheet type; the worksheet type is preserved.'
+            : 'COD indicator disagrees with the COD amount; the amount determines the output type.'
+        };
+        classificationIssues.push(entry);
+        record.classificationWarnings.push(entry);
+      }
+      records.push(record);
     }
 
-    const missingHeaders = Object.entries(access.indexes)
-      .filter(([, indexes]) => indexes.length === 0)
-      .map(([field]) => field);
-
-    return {
-      type,
+    const missingHeaders = Object.keys(ALIASES)
+      .filter((field) => access.indexes[field].length === 0);
+    const sheet = {
+      type: fixedType || 'mixed',
+      name: sheetName,
+      sourceSheetName: sheetName,
       headers: headers.map(normalizeText),
-      headerRow: 3,
+      headerRow: headerIndex + 1,
       records,
       skippedRows,
+      classificationIssues,
+      unclassifiedRecords,
       sourceRowCount: nonEmptySourceRows,
       missingHeaders,
       hasAwbHeader: access.indexes.awb.length > 0,
       isEmpty: nonEmptySourceRows === 0
+    };
+    sheet.cod = createSubset(sheet, 'cod');
+    sheet.nonCod = createSubset(sheet, 'nonCod');
+    return sheet;
+  }
+
+  function aggregateSheets(sheets, type) {
+    const sources = sheets.filter((sheet) => sheet[type]);
+    if (!sources.length) return null;
+    return {
+      type,
+      headers: [...new Set(sources.flatMap((sheet) => sheet.headers))],
+      headerRow: sources.length === 1 ? sources[0].headerRow : null,
+      records: sources.flatMap((sheet) => sheet[type].records),
+      // Retain the old aggregate skip metadata for legacy consumers. New UI
+      // validation uses each source sheet's skippedRows exactly once.
+      skippedRows: sources.flatMap((sheet) => sheet.type === type ? sheet.skippedRows : []),
+      sourceRowCount: sources.reduce((sum, sheet) => sum + sheet[type].records.length + (sheet.type === type ? sheet.skippedRows.length : 0), 0),
+      missingHeaders: [...new Set(sources.flatMap((sheet) => sheet[type].missingHeaders))],
+      hasAwbHeader: sources.every((sheet) => sheet.hasAwbHeader),
+      isEmpty: sources.every((sheet) => sheet.isEmpty),
+      sourceSheetNames: sources.map((sheet) => sheet.sourceSheetName),
+      classificationIssues: sources.flatMap((sheet) => sheet[type].classificationIssues)
     };
   }
 
@@ -164,34 +350,31 @@
     if (!(arrayBuffer instanceof ArrayBuffer) && !ArrayBuffer.isView(arrayBuffer)) {
       throw new TypeError('Workbook data must be an ArrayBuffer.');
     }
-
     const data = arrayBuffer instanceof ArrayBuffer ? new Uint8Array(arrayBuffer) : arrayBuffer;
     const workbook = xlsx.read(data, {
-      type: 'array',
-      cellText: true,
-      cellDates: false,
-      cellFormula: false,
-      dense: false
+      type: 'array', cellText: true, cellDates: false, cellFormula: false, dense: false
     });
-
     if (!workbook || !Array.isArray(workbook.SheetNames)) {
       throw new Error('The workbook could not be read. Verify that it is a valid XLSX or XLS file.');
     }
-
-    const codWorksheet = workbook.Sheets && workbook.Sheets[SUPPORTED_SHEETS.cod];
-    const nonCodWorksheet = workbook.Sheets && workbook.Sheets[SUPPORTED_SHEETS.nonCod];
-    const cod = codWorksheet ? parseSheet(xlsx, codWorksheet, 'cod') : null;
-    const nonCod = nonCodWorksheet ? parseSheet(xlsx, nonCodWorksheet, 'nonCod') : null;
-    const supportedNames = new Set(Object.values(SUPPORTED_SHEETS));
-    const additionalSheets = workbook.SheetNames.filter((name) => !supportedNames.has(name));
-
+    const sheets = [];
+    const additionalSheets = [];
+    workbook.SheetNames.forEach((name) => {
+      const worksheet = workbook.Sheets && workbook.Sheets[name];
+      const fixedType = Object.keys(SUPPORTED_SHEETS)
+        .find((type) => normalizeHeader(name) === normalizeHeader(SUPPORTED_SHEETS[type]));
+      const sheet = worksheet ? parseSheet(xlsx, worksheet, fixedType, name) : null;
+      if (sheet) sheets.push(sheet);
+      else additionalSheets.push(name);
+    });
     return {
       workbook,
       sheetNames: [...workbook.SheetNames],
       additionalSheets,
-      cod,
-      nonCod,
-      supportedSheetCount: Number(Boolean(cod)) + Number(Boolean(nonCod))
+      sheets,
+      cod: aggregateSheets(sheets, 'cod'),
+      nonCod: aggregateSheets(sheets, 'nonCod'),
+      supportedSheetCount: sheets.length
     };
   }
 
@@ -201,6 +384,7 @@
     normalizeHeader,
     normalizeText,
     buildHeaderMap,
+    parseCodAmount,
     parseSheet,
     parseWorkbook
   };

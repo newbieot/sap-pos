@@ -8,7 +8,9 @@
     parsed: null,
     validation: null,
     outputs: [],
+    downloadTimers: [],
     previewType: 'cod',
+    previewSheet: '',
     showAll: false,
     search: '',
     processing: false,
@@ -24,6 +26,10 @@
     sheetCount: byId('sheetCount'), extraSheetCount: byId('extraSheetCount'), codSheetDetail: byId('codSheetDetail'),
     codSheetBadge: byId('codSheetBadge'), nonCodSheetDetail: byId('nonCodSheetDetail'), nonCodSheetBadge: byId('nonCodSheetBadge'),
     additionalSheets: byId('additionalSheets'), additionalSheetList: byId('additionalSheetList'),
+    shipmentSheetList: byId('shipmentSheetList'), previewSheetSelect: byId('previewSheetSelect'),
+    deliverySummaryEmpty: byId('deliverySummaryEmpty'), deliverySummaryContent: byId('deliverySummaryContent'),
+    deliverySummaryText: byId('deliverySummaryText'), deliverySummaryCaveat: byId('deliverySummaryCaveat'),
+    deliveryDistrictList: byId('deliveryDistrictList'), deliverySourceList: byId('deliverySourceList'),
     summaryPanel: byId('summaryPanel'), summaryMessage: byId('summaryMessage'), clearWorkspaceButton: byId('clearWorkspaceButton'),
     metricSheets: byId('metricSheets'), metricCod: byId('metricCod'), metricNonCod: byId('metricNonCod'),
     metricSkipped: byId('metricSkipped'), metricWarnings: byId('metricWarnings'), metricGenerated: byId('metricGenerated'),
@@ -137,6 +143,8 @@
   }
 
   function resetOutputs() {
+    state.downloadTimers.forEach((timer) => window.clearTimeout(timer));
+    state.downloadTimers = [];
     state.outputs.forEach((file) => SAPXExport.revokeFile(file));
     state.outputs = [];
     elements.generatedFiles.replaceChildren();
@@ -162,6 +170,14 @@
     elements.summaryMessage.textContent = state.file ? 'Inspecting the selected workbook.' : 'Select a workbook to begin.';
     elements.codTabCount.textContent = '0';
     elements.nonCodTabCount.textContent = '0';
+    elements.shipmentSheetList.replaceChildren();
+    elements.previewSheetSelect.replaceChildren(new Option('All sheets', ''));
+    elements.previewSheetSelect.disabled = true;
+    state.previewSheet = '';
+    elements.deliverySummaryEmpty.hidden = false;
+    elements.deliverySummaryContent.hidden = true;
+    elements.deliveryDistrictList.replaceChildren();
+    elements.deliverySourceList.replaceChildren();
     renderPreview();
   }
 
@@ -218,6 +234,30 @@
     updateSheet(parsed.cod, elements.codSheetDetail, elements.codSheetBadge);
     updateSheet(parsed.nonCod, elements.nonCodSheetDetail, elements.nonCodSheetBadge);
 
+    elements.shipmentSheetList.replaceChildren();
+    elements.previewSheetSelect.replaceChildren(new Option('All sheets', ''));
+    parsed.sheets.forEach((sheet) => {
+      const item = document.createElement('article');
+      item.className = 'sheet-item';
+      const icon = document.createElement('span');
+      icon.className = 'sheet-icon';
+      icon.textContent = 'S';
+      icon.setAttribute('aria-hidden', 'true');
+      const copy = document.createElement('div');
+      const name = document.createElement('strong');
+      name.textContent = sheet.sourceSheetName;
+      const detail = document.createElement('small');
+      detail.textContent = `Header row ${sheet.headerRow} · ${sheet.cod?.records.length || 0} COD · ${sheet.nonCod?.records.length || 0} Non-COD · ${sheet.skippedRows.length} excluded`;
+      detail.title = detail.textContent;
+      const badge = document.createElement('span');
+      setBadge(badge, sheet.records.length ? 'Detected' : 'Empty', sheet.records.length ? 'ready' : 'warning');
+      copy.append(name, detail);
+      item.append(icon, copy, badge);
+      elements.shipmentSheetList.appendChild(item);
+      elements.previewSheetSelect.appendChild(new Option(sheet.sourceSheetName, sheet.sourceSheetName));
+    });
+    elements.previewSheetSelect.disabled = parsed.sheets.length === 0;
+
     elements.additionalSheetList.replaceChildren();
     parsed.additionalSheets.forEach((sheetName) => {
       const item = document.createElement('li');
@@ -246,7 +286,7 @@
     overviewTitle.textContent = validation.status === 'ready'
       ? 'All detected records are ready.'
       : validation.status === 'invalid'
-        ? 'The workbook cannot be generated yet.'
+        ? 'Some source rows cannot be exported.'
         : 'The workbook can be generated with warnings.';
     overviewText.textContent = validation.status === 'ready'
       ? 'No validation warnings were found in the supported worksheets.'
@@ -284,14 +324,15 @@
   }
 
   function getPreviewRecords() {
-    return state.previewType === 'cod' ? (state.parsed?.cod?.records || []) : (state.parsed?.nonCod?.records || []);
+    const records = state.previewType === 'cod' ? (state.parsed?.cod?.records || []) : (state.parsed?.nonCod?.records || []);
+    return state.previewSheet ? records.filter((record) => record.sourceSheetName === state.previewSheet) : records;
   }
 
   function renderPreview() {
     const records = getPreviewRecords();
     const query = state.search.trim().toLocaleLowerCase('en-US');
     const filtered = query
-      ? records.filter((record) => [record.awb, record.recipientName, record.phone, record.address, record.sender]
+      ? records.filter((record) => [record.sourceSheetName, record.awb, record.recipientName, record.phone, record.address, record.sender]
           .some((value) => String(value || '').toLocaleLowerCase('en-US').includes(query)))
       : records;
     const shown = state.showAll ? filtered : filtered.slice(0, PREVIEW_LIMIT);
@@ -308,11 +349,11 @@
     if (records.length === 0) return;
     const columns = state.previewType === 'cod'
       ? [
-          ['AWB', 'awb'], ['Recipient', 'recipientName'], ['Phone', 'phone'], ['Address', 'address'],
+          ['Sheet', 'sourceSheetName'], ['Row', 'sourceRow'], ['AWB', 'awb'], ['Recipient', 'recipientName'], ['Phone', 'phone'], ['Address', 'address'],
           ['Description', 'description'], ['Weight', 'weightDisplay'], ['COD amount', 'codAmountDisplay']
         ]
       : [
-          ['#', 'sequence'], ['AWB', 'awb'], ['Sender', 'sender'], ['Recipient', 'recipientName'],
+          ['Sheet', 'sourceSheetName'], ['Row', 'sourceRow'], ['AWB', 'awb'], ['Sender', 'sender'], ['Recipient', 'recipientName'],
           ['Phone', 'phone'], ['Address', 'address'], ['Description', 'description'], ['Weight', 'weightDisplay']
         ];
     const headRow = document.createElement('tr');
@@ -347,7 +388,7 @@
   function updateMetrics() {
     const cod = state.parsed?.cod?.records.length || 0;
     const nonCod = state.parsed?.nonCod?.records.length || 0;
-    const skipped = (state.parsed?.cod?.skippedRows.length || 0) + (state.parsed?.nonCod?.skippedRows.length || 0);
+    const skipped = (state.parsed?.sheets || []).reduce((sum, sheet) => sum + sheet.skippedRows.length, 0);
     elements.metricSheets.textContent = String(state.parsed?.supportedSheetCount || 0);
     elements.metricCod.textContent = String(cod);
     elements.metricNonCod.textContent = String(nonCod);
@@ -357,6 +398,64 @@
     elements.codTabCount.textContent = String(cod);
     elements.nonCodTabCount.textContent = String(nonCod);
     elements.summaryMessage.textContent = `${cod + nonCod} valid shipment record${cod + nonCod === 1 ? '' : 's'} detected across ${state.parsed?.supportedSheetCount || 0} supported worksheet${state.parsed?.supportedSheetCount === 1 ? '' : 's'}.`;
+  }
+
+  function renderDeliverySummary() {
+    if (!state.parsed) return;
+    const records = state.parsed.sheets
+      .filter((sheet) => !state.previewSheet || sheet.sourceSheetName === state.previewSheet)
+      .flatMap((sheet) => sheet.records);
+    const summary = SAPXDeliverySummary.summarize(records);
+    elements.deliverySummaryEmpty.hidden = summary.total > 0;
+    elements.deliverySummaryContent.hidden = summary.total === 0;
+    const top = summary.topDistrict;
+    elements.deliverySummaryText.textContent = `${summary.total} shipments · ${summary.cod} COD · ${summary.nonCod} Non-COD. `
+      + (top ? `Largest identified kecamatan: ${summary.topDistrictTies.join(', ')} (${top.count} shipments${summary.topDistrictTies.length > 1 ? ' each' : ''}, ${top.percentage.toFixed(1)}% of this selection). ` : '')
+      + `${summary.knownDistrict} identified by kecamatan; ${summary.knownKelurahan} identified by kelurahan.`;
+    elements.deliverySummaryCaveat.textContent = `${summary.unknownDistrict} shipments have no clear kecamatan; ${summary.unknownKelurahan} have no clear kelurahan. `
+      + `${summary.inferredCount} area assignments use address estimates; ${summary.conflictCount} differ from another source location label. `
+      + 'Area estimates need verification. Unknown areas remain included in the totals. '
+      + (summary.unknownDominates ? 'The unknown group is at least as large as the leading identified kecamatan.' : '');
+    elements.deliveryDistrictList.replaceChildren();
+    summary.districts.forEach((district) => {
+      const detail = document.createElement('details');
+      detail.className = 'delivery-district';
+      const heading = document.createElement('summary');
+      heading.textContent = `${district.name} · ${district.count} shipments · ${district.percentage.toFixed(1)}%`;
+      const bar = document.createElement('span');
+      bar.className = 'delivery-area-bar';
+      bar.style.width = `${district.percentage}%`;
+      bar.setAttribute('aria-hidden', 'true');
+      const counts = document.createElement('p');
+      counts.textContent = `${district.cod} COD · ${district.nonCod} Non-COD · ${district.inferredCount} estimated · ${district.conflictCount} source conflicts`;
+      const table = document.createElement('table');
+      table.className = 'delivery-children';
+      const head = document.createElement('thead');
+      const headRow = document.createElement('tr');
+      ['Kelurahan', 'Total', 'COD', 'Non-COD'].forEach((label) => {
+        const th = document.createElement('th'); th.scope = 'col'; th.textContent = label; headRow.appendChild(th);
+      });
+      head.appendChild(headRow);
+      const body = document.createElement('tbody');
+      district.kelurahan.forEach((child) => {
+        const row = document.createElement('tr');
+        [child.name, child.count, child.cod, child.nonCod].forEach((value) => {
+          const cell = document.createElement('td'); cell.textContent = String(value); row.appendChild(cell);
+        });
+        body.appendChild(row);
+      });
+      table.append(head, body);
+      detail.append(heading, bar, counts, table);
+      elements.deliveryDistrictList.appendChild(detail);
+    });
+    elements.deliverySourceList.replaceChildren();
+    summary.sources.forEach((source) => {
+      const item = document.createElement('li');
+      const link = document.createElement('a');
+      link.href = source.url; link.target = '_blank'; link.rel = 'noopener noreferrer';
+      link.textContent = `${source.title}, ${source.table}`;
+      item.appendChild(link); elements.deliverySourceList.appendChild(item);
+    });
   }
 
   function switchPreview(type) {
@@ -393,14 +492,14 @@
       renderInspection();
       renderValidation();
       updateMetrics();
-      if (state.parsed.cod) log('COD worksheet detected.', 'success');
-      if (state.parsed.nonCod) log('Non-COD worksheet detected.', 'success');
+      renderDeliverySummary();
+      state.parsed.sheets.forEach((sheet) => log(`${sheet.sourceSheetName}: ${sheet.cod?.records.length || 0} COD and ${sheet.nonCod?.records.length || 0} Non-COD records.`, 'success'));
       if (state.parsed.additionalSheets.length) log(`${state.parsed.additionalSheets.length} additional worksheet${state.parsed.additionalSheets.length === 1 ? '' : 's'} detected and ignored.`, 'info');
-      const skipped = (state.parsed.cod?.skippedRows.length || 0) + (state.parsed.nonCod?.skippedRows.length || 0);
-      if (skipped) log(`${skipped} row${skipped === 1 ? '' : 's'} skipped because AWB was empty.`, 'warning');
+      const skipped = state.parsed.sheets.reduce((sum, sheet) => sum + sheet.skippedRows.length, 0);
+      if (skipped) log(`${skipped} source row${skipped === 1 ? '' : 's'} excluded. Review validation details.`, 'warning');
       if (!state.parsed.supportedSheetCount) {
         log('No supported worksheet was found.', 'error');
-        toast('We could not find a worksheet named COD or NON COD (SPESIAL HANDLING).', 'error');
+        toast('No shipment worksheet found. Check the AWB and recipient column headers.', 'error');
       } else if (!hasValidRecords()) {
         log('No valid AWB records were found.', 'error');
         toast('The supported worksheet does not contain valid AWB records.', 'error');
@@ -448,7 +547,7 @@
       const copy = document.createElement('div');
       copy.className = 'generated-file-copy';
       const title = document.createElement('strong');
-      title.textContent = file.type === 'cod' ? 'COD Output' : 'Non-COD Output';
+      title.textContent = `${file.sourceSheetName} · ${file.type === 'cod' ? 'COD' : 'Non-COD'}`;
       const name = document.createElement('span');
       name.textContent = file.filename;
       const details = document.createElement('small');
@@ -483,43 +582,49 @@
     resetOutputs();
     updateSteps(4);
     log('Preparing MILE output workbooks…');
+    const outputs = [];
     try {
-      const outputs = [];
-      if (state.parsed.cod?.records.length) {
-        log('Preparing COD workbook…');
-        const data = SAPXConverters.convertCod(state.parsed.cod.records);
-        outputs.push(SAPXExport.createWorkbookFile({
-          xlsx: window.XLSX,
-          data,
-          columns: SAPXConverters.COD_COLUMNS,
-          filename: SAPXConverters.createOutputFilename('cod'),
-          type: 'cod',
-          textColumns: ['telp_penerima', 'instruksi_pengiriman', 'ref_no']
-        }));
-        log(`${data.length} COD record${data.length === 1 ? '' : 's'} prepared.`, 'success');
-      }
-      if (state.parsed.nonCod?.records.length) {
-        log('Preparing Non-COD workbook…');
-        const data = SAPXConverters.convertNonCod(state.parsed.nonCod.records);
-        outputs.push(SAPXExport.createWorkbookFile({
-          xlsx: window.XLSX,
-          data,
-          columns: SAPXConverters.NON_COD_COLUMNS,
-          filename: SAPXConverters.createOutputFilename('nonCod'),
-          type: 'nonCod',
-          textColumns: ['origin_data_customer_phone', 'destination_data_customer_phone', 'ref_no']
-        }));
-        log(`${data.length} Non-COD record${data.length === 1 ? '' : 's'} prepared.`, 'success');
+      const filenames = new Set();
+      const outputDate = new Date();
+      for (const sheet of state.parsed.sheets) {
+        for (const type of ['cod', 'nonCod']) {
+          const records = sheet[type]?.records || [];
+          if (!records.length) continue;
+          const isCod = type === 'cod';
+          const data = isCod ? SAPXConverters.convertCod(records) : SAPXConverters.convertNonCod(records);
+          const baseFilename = SAPXConverters.createOutputFilename(type, outputDate, sheet.sourceSheetName);
+          let filename = baseFilename;
+          let suffix = 2;
+          while (filenames.has(filename.toLocaleLowerCase('en-US'))) {
+            filename = baseFilename.replace(/\.xlsx$/, `_${suffix++}.xlsx`);
+          }
+          filenames.add(filename.toLocaleLowerCase('en-US'));
+          outputs.push(SAPXExport.createWorkbookFile({
+            xlsx: window.XLSX,
+            data,
+            columns: isCod ? SAPXConverters.COD_COLUMNS : SAPXConverters.NON_COD_COLUMNS,
+            filename,
+            type,
+            sourceSheetName: sheet.sourceSheetName,
+            textColumns: isCod
+              ? ['telp_penerima', 'instruksi_pengiriman', 'ref_no']
+              : ['origin_data_customer_phone', 'destination_data_customer_phone', 'ref_no']
+          }));
+          log(`${sheet.sourceSheetName}: ${data.length} ${isCod ? 'COD' : 'Non-COD'} records prepared.`, 'success');
+        }
       }
       state.outputs = outputs;
       renderGeneratedFiles();
-      outputs.forEach((file, index) => window.setTimeout(() => SAPXExport.downloadFile(file), index * 300));
+      state.downloadTimers = outputs.map((file, index) => window.setTimeout(() => {
+        if (state.outputs.includes(file)) SAPXExport.downloadFile(file);
+      }, index * 300));
       const total = (state.parsed.cod?.records.length || 0) + (state.parsed.nonCod?.records.length || 0);
       elements.summaryMessage.textContent = `${outputs.length} output file${outputs.length === 1 ? '' : 's'} generated from ${total} valid shipment record${total === 1 ? '' : 's'}.`;
       log('Conversion completed. Download ready.', 'success');
       toast(`${outputs.length} MILE workbook${outputs.length === 1 ? '' : 's'} generated successfully.`, 'success');
       elements.summaryPanel.focus({ preventScroll: false });
     } catch (error) {
+      outputs.forEach((file) => SAPXExport.revokeFile(file));
       resetOutputs();
       log('Workbook export failed. Verify that SheetJS loaded correctly and try again.', 'error');
       toast('The output workbook could not be created. Refresh the page and try again.', 'error');
@@ -537,6 +642,7 @@
     resetOutputs();
     state.file = null;
     state.previewType = 'cod';
+    state.previewSheet = '';
     state.search = '';
     state.showAll = false;
     elements.fileInput.value = '';
@@ -586,6 +692,12 @@
       state.showAll = false;
       renderPreview();
     });
+    elements.previewSheetSelect.addEventListener('change', (event) => {
+      state.previewSheet = event.target.value;
+      state.showAll = false;
+      renderPreview();
+      renderDeliverySummary();
+    });
     elements.viewAllButton.addEventListener('click', () => {
       state.showAll = !state.showAll;
       renderPreview();
@@ -595,7 +707,7 @@
 
   function init() {
     bindEvents();
-    const dependenciesReady = Boolean(window.XLSX && window.SAPXParser && window.SAPXConverters && window.SAPXValidation && window.SAPXExport);
+    const dependenciesReady = Boolean(window.XLSX && window.SAPXParser && window.SAPXConverters && window.SAPXValidation && window.SAPXExport && window.SAPXDeliverySummary);
     elements.libraryNotice.hidden = dependenciesReady;
     elements.processButton.disabled = true;
     if (!dependenciesReady) {
