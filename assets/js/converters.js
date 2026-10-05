@@ -164,7 +164,7 @@
   }
 
   function compareRecipientNames(a, b) {
-    return String(a.recipientName || '').localeCompare(String(b.recipientName || ''), 'id', {
+    return sanitizeOutputText(a.recipientName).localeCompare(sanitizeOutputText(b.recipientName), 'id', {
       sensitivity: 'base',
       numeric: true
     });

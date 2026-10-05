@@ -648,7 +648,8 @@
       const name = document.createElement('span');
       name.textContent = file.filename;
       const details = document.createElement('small');
-      details.textContent = `${file.records} record${file.records === 1 ? '' : 's'} · ${formatBytes(file.blob.size)} · Ready`;
+      const sortOrder = file.type === 'cod' ? 'COD amount: lowest to highest' : 'Recipient name: A–Z';
+      details.textContent = `${file.records} record${file.records === 1 ? '' : 's'} · ${formatBytes(file.blob.size)} · ${sortOrder} · Ready`;
       copy.append(title, name, details);
       const button = document.createElement('button');
       button.type = 'button';

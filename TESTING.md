@@ -1,5 +1,13 @@
 # Regression Testing Report
 
+## 2026-10-05 — Output sorting
+
+- Node regression tests: **22 passed, 0 failed**; static audit passed.
+- Verified Non-COD sorting using cleaned recipient names with mixed case and special characters, sequential `connote_code`, numeric COD sorting across formatted amounts, and unchanged source record order.
+- Real XLSX roundtrips checked every adjacent pair in all **17 output files / 725 shipments**: Non-COD recipient names ascend alphabetically and COD amounts ascend numerically. All rows still match the independent source audit.
+- Browser regression passed for the vendor and legacy workbooks, including the sorting labels on download cards and mobile layout.
+- Missing origin customer names still use `SAP Batam`.
+
 ## 2026-10-03 — Vendor workbook support
 
 The current implementation was verified with the real pinned SheetJS `0.20.3` runtime and the supplied private `vendor pos 3 okt 2026.xlsx`, alongside an independent source-row audit. Source workbooks and audit JSON files are not committed.

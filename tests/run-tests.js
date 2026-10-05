@@ -140,6 +140,25 @@ test('uses default weight only when source weight is empty', () => {
   assert.equal(output[1].koli_weight, 2);
 });
 
+test('sorts cleaned Non-COD names and numeric COD amounts without changing source order', () => {
+  const nonCod = [
+    { awb: 'Z', recipientName: '#Zed' },
+    { awb: 'B', recipientName: 'budi' },
+    { awb: 'A', recipientName: '  Ana' },
+    { awb: 'C', recipientName: '@Cici' }
+  ];
+  const output = converters.convertNonCod(nonCod);
+  assert.deepEqual(output.map((row) => row.destination_data_customer_name), ['Ana', 'budi', 'Cici', 'Zed']);
+  assert.deepEqual(output.map((row) => row.ref_no), ['A', 'B', 'C', 'Z']);
+  assert.deepEqual(output.map((row) => row.connote_code), [1, 2, 3, 4]);
+  assert.deepEqual(nonCod.map((row) => row.awb), ['Z', 'B', 'A', 'C']);
+  const cod = [{ awb: 'HIGH', codAmount: 'Rp 100.000' }, { awb: 'LOW', codAmount: 'Rp 2.000' }, { awb: 'MID', codAmount: '10.000' }];
+  const codOutput = converters.convertCod(cod);
+  assert.deepEqual(codOutput.map((row) => row.harga_barang), [2000, 10000, 100000]);
+  assert.deepEqual(codOutput.map((row) => row.ref_no), ['LOW', 'MID', 'HIGH']);
+  assert.deepEqual(cod.map((row) => row.awb), ['HIGH', 'LOW', 'MID']);
+});
+
 test('validation reports skipped rows and invalid COD without silently dropping records', () => {
   const result = validation.validateWorkbook(parsed);
   assert.equal(result.status, 'warning');

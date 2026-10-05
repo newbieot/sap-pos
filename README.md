@@ -92,7 +92,7 @@ Example: `template_cod_karung A_03102026.xlsx`.
 
 ## Non-COD conversion behavior
 
-The generated Non-COD workbook preserves the required schema, with `INS` removed, and is sorted alphabetically by destination recipient name within each source sheet. `connote_code` is sequential in the final sorted workbook. Its worksheet also uses the cleaned source sheet name.
+The generated Non-COD workbook preserves the required schema, with `INS` removed, and is sorted alphabetically by the cleaned destination recipient name within each source sheet, ignoring letter case. `connote_code` is sequential in the final sorted workbook. Its worksheet also uses the cleaned source sheet name. Each download card shows its sort order: recipient name A–Z for Non-COD, or COD amount lowest to highest for COD.
 
 Output filename:
 

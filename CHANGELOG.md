@@ -2,6 +2,13 @@
 
 All notable changes to the SAPX to MILE Converter are documented here.
 
+## Unreleased — 2026-10-05
+
+### Fixed
+
+- Sort Non-COD shipments by the cleaned recipient name shown in the Excel output, ignoring case, so removed special characters do not change alphabetical order. COD shipments continue to sort by numeric COD amount from lowest to highest, within each source sheet.
+- Show the sorting rule on each generated workbook card, and verify ordering in exported workbook roundtrips.
+
 ## Unreleased — 2026-10-03
 
 ### Added

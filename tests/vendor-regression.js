@@ -43,6 +43,14 @@ async function main() {
         assert.deepEqual(rows[0], columns);
         assert.ok(!rows[0].includes('INS'));
         assert.equal(rows.length - 1, records.length);
+        const sortColumn = columns.indexOf(isCod ? 'harga_barang' : 'destination_data_customer_name');
+        for (let i = 2; i < rows.length; i += 1) {
+          const previous = rows[i - 1][sortColumn];
+          const current = rows[i][sortColumn];
+          assert.ok(isCod ? previous <= current : previous.localeCompare(current, 'id', { sensitivity: 'base', numeric: true }) <= 0,
+            `${sheet.sourceSheetName} ${type}: Excel rows ${i} and ${i + 1} must be sorted`);
+        }
+        if (!isCod) assert.deepEqual(rows.slice(1).map((row) => row[columns.indexOf('connote_code')]), records.map((_, index) => index + 1));
         const byAwb = new Map(records.map((record) => [converters.sanitizeOutputText(record.awb, { identifier: true }), record]));
         for (const row of rows.slice(1)) {
           row.forEach((value) => {

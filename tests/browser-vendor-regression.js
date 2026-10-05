@@ -76,6 +76,8 @@ async function main() {
     assert.equal(files, 0);
     await page.locator('#processButton').click();
     await page.waitForFunction(() => document.querySelectorAll('.generated-file').length === 17);
+    assert.match(await page.locator('#generatedFiles').innerText(), /Recipient name: A–Z/);
+    assert.match(await page.locator('#generatedFiles').innerText(), /COD amount: lowest to highest/);
     const outputStats = await page.evaluate(() => window.__testOutputs.map((file) => {
       const rows = XLSX.utils.sheet_to_json(file.workbook.Sheets[file.sheetName], { header: 1, raw: true });
       return { filename: file.filename, sheetName: file.sheetName, sourceSheetName: file.sourceSheetName, records: file.records, hasIns: rows[0].includes('INS'), invalidText: rows.slice(1).some((row) => row.some((value) => typeof value === 'string' && /[^\p{L}\p{N} .\-,()]/u.test(value))) };
